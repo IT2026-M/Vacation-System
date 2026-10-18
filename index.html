@@ -1,0 +1,1268 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vacation System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
+<style>
+:root{
+  --paper:#F5F7F6; --surface:#FFFFFF; --ink:#16252A; --muted:#5D6C70; --line:#DCE3E2;
+  --accent:#E07F00; --accent-ink:#FFFFFF; --accent-soft:#FDF0DE;
+  --ok:#0F6B5E; --ok-soft:#DFF1EC; --bad:#B4233C; --bad-soft:#FBE6EA; --wait:#8A5A00; --wait-soft:#FFF3D6; --off:#6B7579; --off-soft:#ECEFEF;
+  --t-annual:#0F7A6C; --t-casual:#E07F00; --t-sick:#C2415B; --t-maternity:#7A4FB5; --t-hajj:#2F6FB0; --t-exam:#4B7F2A; --t-unpaid:#6B7579;
+  --shadow:0 1px 0 rgba(22,37,42,.06), 0 8px 24px -12px rgba(22,37,42,.18);
+  color-scheme:light; box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#0F1719; --surface:#172225; --ink:#E7EEEE; --muted:#9AAAAD; --line:#2A383B;
+    --accent:#F59A23; --accent-ink:#1A1205; --accent-soft:#3A2A12;
+    --ok:#4CC3AE; --ok-soft:#163A34; --bad:#F07B90; --bad-soft:#3E1D25; --wait:#F2C25B; --wait-soft:#3A3016; --off:#9AA4A8; --off-soft:#253033;
+    --t-annual:#3FBFA9; --t-casual:#F59A23; --t-sick:#EE7F96; --t-maternity:#B28BE8; --t-hajj:#6EA8E3; --t-exam:#8CC266; --t-unpaid:#9AA4A8;
+    --shadow:0 1px 0 rgba(0,0,0,.3), 0 10px 28px -14px rgba(0,0,0,.7); color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0F1719; --surface:#172225; --ink:#E7EEEE; --muted:#9AAAAD; --line:#2A383B;
+  --accent:#F59A23; --accent-ink:#1A1205; --accent-soft:#3A2A12;
+  --ok:#4CC3AE; --ok-soft:#163A34; --bad:#F07B90; --bad-soft:#3E1D25; --wait:#F2C25B; --wait-soft:#3A3016; --off:#9AA4A8; --off-soft:#253033;
+  --t-annual:#3FBFA9; --t-casual:#F59A23; --t-sick:#EE7F96; --t-maternity:#B28BE8; --t-hajj:#6EA8E3; --t-exam:#8CC266; --t-unpaid:#9AA4A8;
+  --shadow:0 1px 0 rgba(0,0,0,.3), 0 10px 28px -14px rgba(0,0,0,.7); color-scheme:dark;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:"Readex Pro","Segoe UI",Tahoma,"Noto Sans Arabic",sans-serif;font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer}
+button[disabled]{opacity:.55;cursor:not-allowed}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:8px}
+
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
+.bar-in{max-width:960px;margin:0 auto;display:flex;align-items:center;gap:12px;padding:10px 20px}
+.brand{display:flex;align-items:baseline;gap:10px;margin-inline-end:auto}
+.brand b{font-weight:700;font-size:1.15rem;color:var(--accent)}
+.brand span{color:var(--muted);font-size:.9rem}
+.icon-btn{position:relative;width:42px;height:42px;border-radius:12px;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center;flex:none}
+.icon-btn svg{width:20px;height:20px}
+.badge{position:absolute;top:-6px;inset-inline-start:-6px;min-width:20px;height:20px;padding:0 5px;border-radius:10px;background:var(--bad);color:#fff;font-size:.72rem;font-weight:600;display:grid;place-items:center}
+.me{display:flex;align-items:center;gap:8px;font-size:.9rem;color:var(--muted)}
+.me img{width:32px;height:32px;border-radius:50%}
+
+main{max-width:960px;margin:0 auto;padding:28px 20px 80px}
+.hello{display:flex;flex-wrap:wrap;align-items:flex-end;gap:16px 24px;margin-bottom:22px}
+.hello h1{font-size:clamp(1.6rem,4vw,2.2rem);font-weight:600;line-height:1.25;margin:0 0 4px}
+.hello p{margin:0;color:var(--muted);max-width:56ch}
+.hello .grow{flex:1 1 300px}
+.primary{background:var(--accent);color:var(--accent-ink);border:0;border-radius:14px;padding:12px 20px;font-weight:600;display:inline-flex;align-items:center;gap:8px}
+.primary:hover:not([disabled]){filter:brightness(1.05)}
+.ghost{background:transparent;border:1px solid var(--line);border-radius:12px;padding:9px 16px;font-weight:500}
+.ghost:hover{border-color:var(--muted)}
+.danger{color:var(--bad)}
+
+.bals{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 26px}
+.bal{background:var(--surface);border-radius:14px;padding:10px 16px;box-shadow:var(--shadow);border-top:3px solid var(--tc);min-width:130px}
+.bal b{display:block;font-size:1.7rem;font-weight:700;line-height:1.1;color:var(--tc)}
+.bal span{font-size:.85rem;color:var(--muted)}
+.bal small{display:block;font-size:.75rem;color:var(--wait)}
+
+.notice{background:var(--surface);border-radius:18px;padding:22px 24px;box-shadow:var(--shadow);border-inline-start:4px solid var(--accent);margin-bottom:24px}
+.notice h2{margin:0 0 6px;font-size:1.2rem;font-weight:600}
+.notice p{margin:0;color:var(--muted)}
+
+.tabs{display:flex;gap:6px;border-bottom:1px solid var(--line);margin-bottom:20px;overflow-x:auto}
+.tab{background:none;border:0;padding:10px 4px;margin-inline-end:18px;color:var(--muted);font-weight:500;border-bottom:3px solid transparent;margin-bottom:-1px;display:flex;gap:8px;align-items:center;white-space:nowrap}
+.tab[aria-selected="true"]{color:var(--ink);border-color:var(--accent)}
+.count{background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:0 8px;font-size:.78rem;font-weight:600}
+
+.list{display:grid;gap:14px}
+.ticket{display:grid;grid-template-columns:150px 1fr;background:var(--surface);border-radius:18px;box-shadow:var(--shadow);overflow:hidden;position:relative}
+.ticket.flash{animation:flash 1.6s ease}
+@keyframes flash{0%,40%{box-shadow:0 0 0 3px var(--accent)}100%{box-shadow:var(--shadow)}}
+.stub{padding:18px 16px;background:color-mix(in srgb,var(--tc) 12%,var(--surface));border-inline-end:2px dashed var(--line);display:flex;flex-direction:column;justify-content:center;gap:2px;position:relative}
+.stub::before,.stub::after{content:"";position:absolute;inset-inline-end:-11px;width:20px;height:20px;border-radius:50%;background:var(--paper)}
+.stub::before{top:-10px}.stub::after{bottom:-10px}
+.stub .d{font-size:2.1rem;font-weight:700;line-height:1;color:var(--tc)}
+.stub .m{font-size:.85rem;color:var(--muted)}
+.stub .to{font-size:.8rem;color:var(--muted);margin:6px 0 2px}
+.stub .d2{font-size:1.15rem;font-weight:600;color:var(--tc);line-height:1.2}
+.body{padding:16px 20px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.type{font-weight:600;font-size:1.05rem;display:flex;align-items:center;gap:8px}
+.type i{width:10px;height:10px;border-radius:3px;background:var(--tc);display:inline-block}
+.days{color:var(--muted);font-size:.92rem}
+.pill{margin-inline-start:auto;border-radius:999px;padding:3px 12px;font-size:.82rem;font-weight:600}
+.s-pending{background:var(--wait-soft);color:var(--wait)}
+.s-approved{background:var(--ok-soft);color:var(--ok)}
+.s-rejected{background:var(--bad-soft);color:var(--bad)}
+.s-cancelled{background:var(--off-soft);color:var(--off)}
+.who{display:flex;align-items:center;gap:8px;font-size:.9rem;color:var(--muted)}
+.av{width:26px;height:26px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-size:.8rem;font-weight:600;flex:none}
+.reason{margin:0;font-size:.95rem;overflow-wrap:anywhere}
+.note{font-size:.9rem;background:var(--paper);border-radius:10px;padding:8px 12px;overflow-wrap:anywhere}
+.note b{font-weight:600}
+.balline{font-size:.88rem;color:var(--muted)}
+.balline.short{color:var(--bad);font-weight:500}
+.amend{font-size:.88rem;border-inline-start:3px solid var(--accent);padding:4px 10px;background:var(--accent-soft);border-radius:6px}
+.amend s{color:var(--muted)}
+.new-dot{position:absolute;top:12px;inset-inline-end:12px;background:var(--accent);color:var(--accent-ink);font-size:.72rem;font-weight:600;border-radius:999px;padding:1px 9px}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:2px}
+.decide{display:grid;gap:8px}
+.decide textarea{width:100%;min-height:42px;resize:vertical;border:1px solid var(--line);border-radius:10px;padding:8px 12px;background:var(--paper)}
+.ok-btn{background:var(--ok);color:#fff;border:0;border-radius:12px;padding:9px 18px;font-weight:600}
+.no-btn{background:transparent;color:var(--bad);border:1px solid currentColor;border-radius:12px;padding:8px 16px;font-weight:600}
+.meta{font-size:.8rem;color:var(--muted)}
+.section-h{font-size:.95rem;font-weight:600;color:var(--muted);margin:26px 0 10px}
+.empty{text-align:center;padding:48px 20px;border:2px dashed var(--line);border-radius:18px;color:var(--muted)}
+.empty p{margin:0 0 16px}
+
+/* HR */
+.toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:18px}
+.toolbar .search{flex:1 1 220px;max-width:340px;margin-inline-start:auto}
+.wait-box{background:var(--wait-soft);border-radius:16px;padding:14px 18px;margin-bottom:20px}
+.wait-box h3{margin:0 0 8px;font-size:1rem;font-weight:600;color:var(--wait)}
+.wait-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:6px 0;border-top:1px solid color-mix(in srgb,var(--wait) 20%,transparent)}
+.wait-row:first-of-type{border-top:0}
+.wait-row span{margin-inline-end:auto;overflow-wrap:anywhere}
+.tbl-wrap{overflow-x:auto;background:var(--surface);border-radius:16px;box-shadow:var(--shadow)}
+table{border-collapse:collapse;width:100%;font-size:.9rem}
+th,td{padding:10px 14px;text-align:start;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-weight:500;color:var(--muted);font-size:.82rem;background:var(--paper)}
+td.num{font-variant-numeric:tabular-nums;font-weight:600}
+td.num.low{color:var(--bad)}
+td .sub{display:block;color:var(--muted);font-size:.78rem;font-weight:400}
+tr:last-child td{border-bottom:0}
+.linkbtn{background:none;border:0;color:var(--accent);font-weight:500;padding:4px 6px}
+
+/* Dialogs */
+dialog{border:0;padding:0;border-radius:22px;background:var(--surface);color:var(--ink);width:min(580px,calc(100vw - 24px));max-height:calc(100dvh - 32px);box-shadow:0 24px 60px -20px rgba(0,0,0,.45)}
+dialog::backdrop{background:rgba(10,20,22,.45)}
+.sheet{display:flex;flex-direction:column;max-height:calc(100dvh - 32px)}
+.sheet header{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--line)}
+.sheet header h2{margin:0;font-size:1.2rem;font-weight:600}
+.sheet .scroll{overflow-y:auto;padding:18px 22px;display:grid;gap:20px}
+.sheet footer{padding:14px 22px;border-top:1px solid var(--line);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.sheet footer .err{color:var(--bad);font-size:.88rem;margin-inline-end:auto}
+.field>label,.field>.lbl{display:block;font-weight:500;margin-bottom:8px}
+.help{font-size:.85rem;color:var(--muted);margin:6px 0 0}
+.types{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.tchip{position:relative}
+.tchip input{position:absolute;opacity:0;inset:0}
+.tchip label{display:block;border:1.5px solid var(--line);border-radius:12px;padding:9px 12px;cursor:pointer;height:100%}
+.tchip label b{display:flex;align-items:center;gap:8px;font-weight:500}
+.tchip label b i{width:10px;height:10px;border-radius:3px;background:var(--tc)}
+.tchip label small{display:block;color:var(--muted);font-size:.76rem;margin-top:2px}
+.tchip input:checked+label{border-color:var(--tc);background:color-mix(in srgb,var(--tc) 10%,var(--surface))}
+.tchip input:focus-visible+label{outline:3px solid var(--accent);outline-offset:2px}
+.tchip input:disabled+label{opacity:.45;cursor:not-allowed}
+.dates{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.dates label,.grid2 label{font-size:.85rem;color:var(--muted);display:block;margin-bottom:4px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.inp{width:100%;border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--paper)}
+.calc{margin-top:8px;font-size:.9rem;color:var(--muted)}
+.calc b{color:var(--ink)}
+.chosen{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--paper)}
+.chosen span{margin-inline-end:auto;font-weight:500;overflow-wrap:anywhere}
+.chosen small{color:var(--muted);display:block;font-weight:400}
+.warn{background:var(--accent-soft);border-radius:12px;padding:10px 14px;font-size:.9rem}
+.check{display:flex;gap:10px;align-items:flex-start;font-size:.92rem}
+.check input{margin-top:5px;width:18px;height:18px;accent-color:var(--accent)}
+.preview{display:flex;flex-wrap:wrap;gap:8px}
+.preview span{background:var(--paper);border-radius:999px;padding:3px 12px;font-size:.85rem}
+.drop{border:2px dashed var(--line);border-radius:16px;padding:22px;text-align:center}
+.drop p{margin:0 0 12px;color:var(--muted);font-size:.92rem}
+
+.npanel{position:fixed;top:calc(env(safe-area-inset-top,0px) + 66px);inset-inline-end:max(12px,calc((100vw - 960px)/2 + 12px));width:min(380px,calc(100vw - 24px));background:var(--surface);border-radius:16px;box-shadow:0 20px 50px -18px rgba(0,0,0,.4);border:1px solid var(--line);z-index:20;overflow:hidden}
+.npanel header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line)}
+.npanel header b{font-weight:600}
+.npanel header button{background:none;border:0;color:var(--accent);font-size:.85rem}
+.nlist{max-height:60vh;overflow:auto}
+.nitem{display:flex;gap:10px;align-items:flex-start;width:100%;background:none;border:0;border-bottom:1px solid var(--line);padding:12px 16px;text-align:start}
+.nitem:hover{background:var(--paper)}
+.nitem p{margin:0;font-size:.92rem}
+.nitem small{color:var(--muted);font-size:.78rem}
+.nempty{padding:24px 16px;color:var(--muted);text-align:center;font-size:.92rem}
+
+.toast{position:fixed;bottom:calc(env(safe-area-inset-bottom,0px) + 20px);inset-inline:0;margin:0 auto;width:fit-content;max-width:calc(100vw - 32px);background:var(--ink);color:var(--paper);padding:12px 18px;border-radius:14px;font-size:.92rem;z-index:30;box-shadow:0 12px 30px -10px rgba(0,0,0,.5);transition:transform .25s ease,opacity .25s ease}
+.toast[hidden]{display:block;opacity:0;transform:translateY(20px);pointer-events:none}
+.gate{max-width:520px;margin:60px auto;text-align:center;color:var(--muted)}
+.gate h2{color:var(--ink);font-weight:600}
+.loading{color:var(--muted);padding:30px 0;text-align:center}
+
+@media (max-width:560px){
+  .ticket{grid-template-columns:1fr}
+  .stub{flex-direction:row;align-items:baseline;gap:10px;border-inline-end:0;border-bottom:2px dashed var(--line);padding:14px 18px}
+  .stub::before,.stub::after{display:none}
+  .stub .d{font-size:1.6rem}
+  .stub .to{margin:0}
+  .me span{display:none}
+  .dates,.grid2{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+<style>
+.plist{list-style:none;margin:8px 0 0;padding:6px;border:1px solid var(--line);border-radius:12px;background:var(--surface);max-height:260px;overflow:auto}
+.plist li button:not(.linkbtn){width:100%;display:flex;align-items:center;gap:10px;background:none;border:0;padding:8px;border-radius:8px;text-align:start}
+.plist li button:not(.linkbtn):hover,.plist li button:focus-visible{background:var(--paper)}
+.plist li button span small{display:block;color:var(--muted);font-size:.78rem}
+.plist .hint{padding:8px;color:var(--muted);font-size:.85rem}
+.chosen[hidden]{display:none}
+</style>
+<style>
+:root{--t-wellness:#2E8B6E;--t-cto:#8B5E34;--t-paternity:#3B6FD8;--t-other:#5B6B8C}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--t-wellness:#5CC9A7;--t-cto:#D29A63;--t-paternity:#7FA6F0;--t-other:#9AA8C6}}
+:root[data-theme="dark"]{--t-wellness:#5CC9A7;--t-cto:#D29A63;--t-paternity:#7FA6F0;--t-other:#9AA8C6}
+.type{flex-wrap:wrap}
+</style>
+</head>
+<body>
+<header class="bar">
+  <div class="bar-in">
+    <div class="brand"><b dir="ltr">Vacation System</b><span>مؤسسة كير مصر للتنمية</span></div>
+    <button class="ghost" id="langBtn" data-noi18n style="padding:8px 12px;font-size:.88rem">English</button>
+    <button class="icon-btn" id="bell" aria-label="الإشعارات" aria-expanded="false" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+      <span class="badge" id="badge" hidden>0</span>
+    </button>
+    <div class="me" id="meBox"></div>
+  </div>
+</header>
+
+<main id="app"><div class="loading">جاري التحميل…</div></main>
+
+<div class="npanel" id="npanel" hidden role="dialog" aria-label="الإشعارات">
+  <header><b>الإشعارات</b><button id="readAll">تعليم الكل كمقروء</button></header>
+  <div class="nlist" id="nlist"></div>
+</div>
+
+<!-- Leave request form -->
+<dialog id="sheet" aria-labelledby="sheetTitle">
+  <div class="sheet">
+    <header><h2 id="sheetTitle">طلب إجازة جديد</h2><button class="icon-btn" data-close="sheet" aria-label="إغلاق"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
+    <div class="scroll">
+      <div class="warn" id="amendWarn" hidden>الإجازة دي متوافق عليها. لو عدّلتها هترجع لمديرك يوافق على التعديل، ولو رفضه هتفضل الإجازة الأصلية زي ما هي.</div>
+      <div class="field"><span class="lbl" id="typesLbl">نوع الإجازة</span><div class="types" id="types" role="radiogroup" aria-labelledby="typesLbl"></div></div>
+      <div class="field">
+        <span class="lbl">المدة</span>
+        <div class="dates">
+          <div><label for="dStart">من يوم</label><input class="inp" type="date" id="dStart"></div>
+          <div><label for="dEnd">لحد يوم</label><input class="inp" type="date" id="dEnd"></div>
+        </div>
+        <div class="calc" id="calc">اختار تاريخ البداية والنهاية.</div>
+      </div>
+      <div class="field"><span class="lbl">هيتبعت لـ</span><div class="chosen" id="mgrShow"></div>
+        <div class="picker" id="mgrPick" hidden>
+          <input class="inp" id="mgrInput" placeholder="دوّر بالاسم أو اكتب الإيميل" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="mgrList" aria-label="اختار المدير">
+          <ul class="plist" id="mgrList" role="listbox"></ul>
+        </div>
+      </div>
+      <div class="field">
+        <label for="reason">ملاحظات <span style="color:var(--muted);font-weight:400">(اختياري)</span></label>
+        <textarea class="inp" id="reason" rows="3" maxlength="600" placeholder="مثلاً: سفر عائلي، أو مين هيغطي شغلك"></textarea>
+      </div>
+    </div>
+    <footer><span class="err" id="formErr" role="alert"></span><button class="ghost" data-close="sheet">إلغاء</button><button class="primary" id="submitBtn">إرسال للمدير</button></footer>
+  </div>
+</dialog>
+
+<!-- Import dialog -->
+<dialog id="imp" aria-labelledby="impTitle">
+  <div class="sheet">
+    <header><h2 id="impTitle">تحديث من Microsoft Lists</h2><button class="icon-btn" data-close="imp" aria-label="إغلاق"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
+    <div class="scroll" id="impBody"></div>
+    <footer><span class="err" id="impErr" role="alert"></span><button class="ghost" data-close="imp">إلغاء</button><button class="primary" id="impGo" disabled>استيراد</button></footer>
+  </div>
+</dialog>
+
+<!-- Employee dialog -->
+<dialog id="empDlg" aria-labelledby="empTitle">
+  <div class="sheet">
+    <header><h2 id="empTitle">إضافة موظف</h2><button class="icon-btn" data-close="empDlg" aria-label="إغلاق"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
+    <div class="scroll" id="empBody"></div>
+    <footer><span class="err" id="empErr" role="alert"></span><button class="ghost danger" id="empDel" hidden>حذف الموظف</button><button class="ghost" data-close="empDlg">إلغاء</button><button class="primary" id="empSave">حفظ</button></footer>
+  </div>
+</dialog>
+
+<dialog id="polDlg" aria-labelledby="polTitle">
+  <div class="sheet">
+    <header><h2 id="polTitle">رصيد أول السنة</h2><button class="icon-btn" data-close="polDlg" aria-label="إغلاق"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
+    <div class="scroll" id="polBody"></div>
+    <footer><span class="err" id="polErr" role="alert"></span><button class="ghost" data-close="polDlg">إلغاء</button><button class="primary" id="polSave">حفظ</button></footer>
+  </div>
+</dialog>
+
+<div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+
+/* =====================================================================
+   CONFIG — fill these 4 values (see the setup guide)
+   ===================================================================== */
+const CONFIG = {
+  tenantId: '8a94f984-7ac5-49ca-9e11-9df9de6faf47',             // Directory (tenant) ID from Entra
+  clientId: '1fc63b2a-8a85-47b1-bd4d-2f82cc81ed42',             // Application (client) ID from Entra
+  siteHost: 'careegfoundation.sharepoint.com',   // SharePoint host name
+  sitePath: '/sites/Inventory',                 // SharePoint site path
+  allowedDomain: 'cef-eg.org'
+};
+const LISTS = {requests:'VS_Requests', employees:'VS_Employees', settings:'VS_Settings'};
+const SCOPES = ['User.Read','Sites.ReadWrite.All'];
+const SETUP_SCOPES = ['User.Read','Sites.ReadWrite.All','Sites.Manage.All'];
+
+/* ---------- Microsoft sign-in ---------- */
+let pca=null, account=null;
+async function msalInit(){
+  pca=new msal.PublicClientApplication({
+    auth:{clientId:CONFIG.clientId, authority:'https://login.microsoftonline.com/'+CONFIG.tenantId, redirectUri:location.origin+location.pathname},
+    cache:{cacheLocation:'localStorage'}
+  });
+  if(pca.initialize) await pca.initialize();
+  const res=await pca.handleRedirectPromise();
+  account=(res&&res.account)||pca.getActiveAccount()||pca.getAllAccounts()[0]||null;
+  if(account) pca.setActiveAccount(account);
+}
+function signIn(){ pca.loginRedirect({scopes:SCOPES,prompt:'select_account'}); }
+function signOut(){ pca.logoutRedirect({account}); }
+async function token(scopes){
+  scopes=scopes||SCOPES;
+  try{ return (await pca.acquireTokenSilent({scopes,account})).accessToken; }
+  catch(e){ await pca.acquireTokenRedirect({scopes,account}); throw e; }
+}
+
+/* ---------- Microsoft Graph ---------- */
+const GRAPH='https://graph.microsoft.com/v1.0';
+async function gfetch(url,opt,scopes){
+  opt=opt||{};
+  const t=await token(scopes);
+  const r=await fetch(url.startsWith('http')?url:GRAPH+url,{...opt,headers:{Authorization:'Bearer '+t,'Content-Type':'application/json',Prefer:'HonorNonIndexedQueriesWarningMayFailRandomly',...(opt.headers||{})}});
+  if(!r.ok){
+    const e=new Error('Graph '+r.status); e.status=r.status;
+    e.code=r.status===403||r.status===401?'invalid_argument':(r.status===429||r.status>=500?'unavailable':'unknown');
+    try{ e.body=await r.json(); }catch(_){}
+    console.warn(e,e.body); throw e;
+  }
+  return r.status===204?null:r.json();
+}
+let SITE_ID=null; const LIST_IDS={};
+async function resolveSite(){
+  const site=await gfetch('/sites/'+CONFIG.siteHost+':'+CONFIG.sitePath+'?$select=id');
+  SITE_ID=site.id;
+  const ls=await gfetch('/sites/'+SITE_ID+'/lists?$select=id,displayName&$top=500');
+  for(const [k,name] of Object.entries(LISTS)){ const l=ls.value.find(x=>x.displayName===name); if(l) LIST_IDS[k]=l.id; }
+}
+async function listItems(coll,filter){
+  let url='/sites/'+SITE_ID+'/lists/'+LIST_IDS[coll]+'/items?expand=fields&$top=999'+(filter?'&$filter='+encodeURIComponent(filter):'');
+  const out=[];
+  while(url){ const j=await gfetch(url); out.push(...j.value); url=j['@odata.nextLink']||null; }
+  return out;
+}
+
+/* ---------- Mapping app records <-> SharePoint columns ---------- */
+const TYPE_KEYS=['annual','sick','emergency','wellness','cto','maternity','paternity','study','holiday','other','unpaid'];
+const SCHEMA={
+  requests:{employeeId:['EmployeeId','text'],employeeEmail:['EmployeeEmail','text',1],managerEmail:['ManagerEmail','text',1],type:['LeaveType','text'],
+    start:['StartDate','text'],end:['EndDate','text'],days:['Days','number'],reason:['Reason','note'],status:['Status','text',1],amendment:['Amendment','bool'],
+    previous:['PreviousJson','note','json'],managerNote:['ManagerNote','note'],createdAt:['CreatedAt','text'],updatedAt:['UpdatedAt','text'],
+    decidedAt:['DecidedAt','text'],approvedAt:['ApprovedAt','text'],decidedBy:['DecidedBy','text'],managerUnseen:['ManagerUnseen','bool'],
+    employeeUnseen:['EmployeeUnseen','bool'],lastEvent:['LastEvent','text'],history:['HistoryJson','note','json']},
+  employees:{email:['EmpEmail','text'],name:['EmpName','text'],managerEmail:['ManagerEmail','text',1],balanceAsOf:['BalanceAsOf','text'],updatedAt:['UpdatedAt','text']},
+  settings:{value:['ValueJson','note','json']}
+};
+function safeJson(v){ try{ return JSON.parse(v); }catch(_){ return null; } }
+function toFields(coll,doc,id){
+  const f={}; if(id!=null) f.Title=id;
+  if(coll==='settings'){ f.ValueJson=JSON.stringify(doc); return f; }
+  for(const [k,[col,kind,j]] of Object.entries(SCHEMA[coll])){
+    if(!(k in doc)) continue; const v=doc[k];
+    if(j==='json') f[col]=v==null?'':JSON.stringify(v);
+    else if(kind==='bool') f[col]=!!v;
+    else if(kind==='number') f[col]=v==null||v===''?null:+v;
+    else f[col]=v==null?'':String(v);
+  }
+  if(coll==='employees'){
+    if('balances' in doc) for(const t of TYPE_KEYS){ const v=doc.balances&&doc.balances[t]; f['Bal_'+t]=v==null?null:+v; }
+    if('allowances' in doc) for(const t of TYPE_KEYS){ const v=doc.allowances&&doc.allowances[t]; f['Alw_'+t]=v==null?null:+v; }
+  }
+  return f;
+}
+function fromFields(coll,f){
+  if(coll==='settings') return safeJson(f.ValueJson||'{}')||{};
+  const d={};
+  for(const [k,[col,kind,j]] of Object.entries(SCHEMA[coll])){
+    const v=f[col];
+    if(j==='json') d[k]=v?safeJson(v):null;
+    else if(kind==='bool') d[k]=!!v;
+    else if(kind==='number') d[k]=v==null||v===''?null:+v;
+    else d[k]=v==null?'':String(v);
+  }
+  if(coll==='employees'){
+    d.balances={}; d.allowances={};
+    for(const t of TYPE_KEYS){ if(f['Bal_'+t]!=null&&f['Bal_'+t]!=='') d.balances[t]=+f['Bal_'+t]; if(f['Alw_'+t]!=null&&f['Alw_'+t]!=='') d.allowances[t]=+f['Alw_'+t]; }
+  }
+  return d;
+}
+
+/* ---------- Small data layer over SharePoint lists (polled) ---------- */
+const itemIds={requests:{},employees:{},settings:{}};
+const subs=new Set();
+function q(v){ return "'"+String(v).replace(/'/g,"''")+"'"; }
+async function fetchItems(coll,conds){
+  const filter=conds.map(([f,v])=>'fields/'+(f==='__id'?'Title':SCHEMA[coll][f][0])+' eq '+q(v)).join(' and ');
+  const items=await listItems(coll,filter);
+  return items.map(it=>{ const id=it.fields.Title; itemIds[coll][id]=it.id; const d=fromFields(coll,it.fields); return {id,data:()=>d}; });
+}
+const snapQ=docs=>({docs,docChanges:()=>[],metadata:{fromCache:false}});
+const snapD=(id,x)=>({exists:!!x,id,data:()=>x?x.data():undefined,metadata:{fromCache:false}});
+async function runSub(s){
+  try{
+    if(s.kind==='doc'){ const r=await fetchItems(s.coll,[['__id',s.id]]); s.cb(snapD(s.id,r[0])); }
+    else s.cb(snapQ(await fetchItems(s.coll,s.conds)));
+  }catch(e){ if(s.err) s.err(e); }
+}
+let pollT=null, polling=false;
+async function pollAll(){ if(polling) return; polling=true; try{ for(const s of [...subs]) await runSub(s); } finally{ polling=false; } }
+function soon(){ clearTimeout(pollT); pollT=setTimeout(()=>{ pollAll(); schedule(); },400); }
+function schedule(){ clearTimeout(pollT); pollT=setTimeout(()=>{ pollAll(); schedule(); },30000); }
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&subs.size) soon(); });
+async function writeDoc(coll,id,doc){
+  let iid=itemIds[coll][id];
+  if(!iid){ await fetchItems(coll,[['__id',id]]); iid=itemIds[coll][id]; }
+  const fields=toFields(coll,doc,id);
+  if(iid) await gfetch('/sites/'+SITE_ID+'/lists/'+LIST_IDS[coll]+'/items/'+iid+'/fields',{method:'PATCH',body:JSON.stringify(fields)});
+  else { const it=await gfetch('/sites/'+SITE_ID+'/lists/'+LIST_IDS[coll]+'/items',{method:'POST',body:JSON.stringify({fields})}); itemIds[coll][id]=it.id; }
+  soon();
+}
+function makeDoc(coll,id){ return {
+  onSnapshot(cb,err){ const s={kind:'doc',coll,id,cb,err}; subs.add(s); runSub(s); return ()=>subs.delete(s); },
+  async get(){ const r=await fetchItems(coll,[['__id',id]]); return snapD(id,r[0]); },
+  set:d=>writeDoc(coll,id,d), update:p=>writeDoc(coll,id,p),
+  async delete(){ let iid=itemIds[coll][id]; if(!iid){ await fetchItems(coll,[['__id',id]]); iid=itemIds[coll][id]; } if(iid){ await gfetch('/sites/'+SITE_ID+'/lists/'+LIST_IDS[coll]+'/items/'+iid,{method:'DELETE'}); delete itemIds[coll][id]; } soon(); }
+}; }
+function makeQuery(coll,conds){ return {
+  where:(f,op,v)=>makeQuery(coll,[...conds,[f,v]]),
+  onSnapshot(cb,err){ const s={kind:'query',coll,conds,cb,err}; subs.add(s); runSub(s); return ()=>subs.delete(s); },
+  async get(){ return snapQ(await fetchItems(coll,conds)); },
+  doc:id=>makeDoc(coll,id)
+}; }
+const SPDB={collection:c=>makeQuery(c,[])};
+
+/* ---------- First-time setup: create the 3 lists ---------- */
+function colDef(name,kind,indexed){
+  const c={name};
+  if(kind==='number') c.number={}; else if(kind==='bool') c.boolean={};
+  else if(kind==='note') c.text={allowMultipleLines:true,textType:'plain',linesForEditing:6};
+  else c.text={};
+  if(indexed) c.indexed=true;
+  return c;
+}
+async function createLists(){
+  const defs={
+    requests:Object.values(SCHEMA.requests).map(([n,k,i])=>colDef(n,k,i===1)),
+    employees:[...Object.values(SCHEMA.employees).map(([n,k,i])=>colDef(n,k,i===1)),...TYPE_KEYS.map(t=>colDef('Bal_'+t,'number')),...TYPE_KEYS.map(t=>colDef('Alw_'+t,'number'))],
+    settings:[colDef('ValueJson','note')]
+  };
+  for(const [k,name] of Object.entries(LISTS)){
+    if(LIST_IDS[k]) continue;
+    const l=await gfetch('/sites/'+SITE_ID+'/lists',{method:'POST',body:JSON.stringify({displayName:name,columns:defs[k],list:{template:'genericList'}})},SETUP_SCOPES);
+    LIST_IDS[k]=l.id;
+  }
+  const hr=await SPDB.collection('settings').doc('hr').get();
+  if(!hr.exists) await SPDB.collection('settings').doc('hr').set({emails:[ekey(me.email)]});
+}
+let lang='ar'; try{ if(localStorage.getItem('vs-lang')==='en') lang='en'; }catch(_){}
+const EN={"قيد المراجعة": "Pending review", "تمت الموافقة": "Approved", "مرفوضة": "Rejected", "ملغاة": "Cancelled", "يوم واحد": "1 day", "يومين": "2 days", " أيام": " days", " يوم": " days", "طلب واحد": "1 request", "طلبين": "2 requests", " طلبات": " requests", "إجازة": "Leave", "؟": "?", "مش مسموح لك تعمل التغيير ده. اتأكد من صلاحيتك على الصفحة.": "You're not allowed to make this change. Check your access to this page.", "مساحة النظام امتلأت. تواصل مع مسؤول النظام.": "System storage is full. Contact the system admin.", "محصلش حفظ، جرّب تاني بعد لحظة.": "Couldn't save. Try again in a moment.", "افتح النظام من Claude": "Open the system from Claude", "الصفحة دي بتشتغل لما تتفتح من رابطها على claude.ai وانت مسجّل دخول.": "This page works when opened from its claude.ai link while signed in.", "سجّل دخولك الأول": "Sign in first", "النظام محتاج يعرف انت مين. افتح الرابط وانت مسجّل دخول في حساب المنظمة.": "The system needs to know who you are. Open the link while signed in to your organization account.", "دخول الـ HR": "Open HR", "خروج من الـ HR": "Exit HR", "اكتب إيميل الشغل صح.": "Enter a valid work email.", "اكتب إيميل الشغل اللي بينتهي بـ @cef-eg.org": "Enter your work email ending in @cef-eg.org", "اتبعت للـ HR يأكدوا. هتشتغل معاك أول ما يأكدوا.": "Sent to HR for confirmation. It will work as soon as they confirm.", "مفيش صلاحية": "No access", "الوصول للصفحة دي اتغيّر.": "Your access to this page changed.", "جاري التحميل…": "Loading…", "عندك ": "You have ", " مستني رد ": " waiting for a reply from ", "طلباتك بتروح لـ": "Your requests go straight to ", " على طول، والرصيد بيتخصم أول ما يوافق.": ", and your balance is deducted once approved.", "أهلاً يا ": "Hi, ", "أهلاً بيك": "Welcome", "معاك صلاحية مشاهدة بس.": "You have view-only access.", "طلب إجازة جديد": "New leave request", "رصيد الإجازات": "Leave balances", "رصيد ": "", " في الانتظار": " pending", "بياناتك مش في الليست": "Your details aren't in the list", "حسابك مربوط بـ ": "Your account is linked to ", " بس الإيميل ده مش موجود في ليست الموظفين. كلّم الـ HR.": " but that email isn't in the employee list. Contact HR.", "طلباتي": "My requests", "طلبات فريقي": "Team requests", "الموظفين والأرصدة": "Employees & balances", "مستنيين تأكيد الـ HR": "Waiting for HR confirmation", "طلبت تربط حسابك بإيميل ": "You asked to link your account to ", ". أول ما الـ HR يأكدوا، هتلاقي رصيدك ومديرك هنا من غير ما تحدّث الصفحة.": ". Once HR confirms, your balance and manager will appear here without refreshing.", "كتبت الإيميل غلط؟ غيّره": "Typed the wrong email? Change it", "إيميل الشغل": "Work email", "ربط حسابي": "Link my account", "أول مرة تدخل؟": "First time here?", "اكتب إيميل الشغل بتاعك زي ما هو في ليست الموظفين، عشان نجيب مديرك ورصيدك. الـ HR هيأكدوا الربط مرة واحدة بس.": "Enter your work email as it appears in the employee list so we can find your manager and balance. HR confirms the link once.", "معاك صلاحية مشاهدة بس، اطلب من الـ HR صلاحية Contributor.": "You have view-only access. Ask HR for Contributor access.", "لسه مطلبتش أي إجازة.": "You haven't requested any leave yet.", "اطلب أول إجازة": "Request your first leave", "السابقة": "Past", "مفيش طلبات من فريقك لسه.": "No requests from your team yet.", "محتاجة ردك": "Needs your reply", "تم الرد عليها": "Answered", "لحد": "to", "الرصيد مش مكفّي: فاضل له ": "Not enough balance: only ", " بس من ال": " left of ", "رصيد ال": "", " بعد الموافقة: ": " balance after approval: ", "تعديل قيد المراجعة": "Change pending review", "المدير: ": "Manager: ", "كانت: ": "Was: ", "، ": ", ", " لحد ": " to ", "رد المدير: ": "Manager's reply: ", "جديد": "New", "اتبعت": "Sent", "اتبعت تاني": "Resent", "اتعدّل": "Edited", "اتطلب تعديل": "Change requested", "اتوافق عليه": "Approved", "اترفض": "Rejected", "التعديل اترفض": "Change rejected", "اتلغى": "Cancelled", "آخر تحديث": "Last updated", "طلب تعديل": "Request change", "تعديل وإعادة إرسال": "Edit & resend", "تعديل": "Edit", "إلغاء الإجازة": "Cancel leave", "متأكد؟ اضغط تاني": "Sure? Click again", "تمام، شفته": "Got it", "رد للموظف (اختياري)": "Reply to employee (optional)", "رد للموظف": "Reply to employee", "موافقة على التعديل": "Approve change", "موافقة": "Approve", "رفض التعديل": "Reject change", "رفض": "Reject", "مينفعش توافق: رصيد ال": "Can't approve: ", " مش مكفّي. ممكن ترفض وتطلب منه يغيّر النوع.": " balance is not enough. You can reject and ask them to change the type.", "اتوافق على الطلب واتخصم من الرصيد، والموظف هيوصله إشعار.": "Approved and deducted from the balance. The employee will be notified.", "اتبعت الرد للموظف.": "Reply sent to the employee.", "اتلغت الإجازة ورجعت الأيام لرصيدك.": "Leave cancelled and the days returned to your balance.", "اتلغى الطلب وبلّغنا مديرك.": "Request cancelled and your manager was notified.", " وافق على إجازتك ال": " approved your ", " رفض طلب إجازتك ال": " rejected your request for ", " رفض التعديل، وإجازتك الأصلية لسه قائمة": " rejected the change; your original leave still stands", "تحديث على طلب إجازتك": "Update on your leave request", " ألغى إجازته ال": " cancelled their ", " طالب تعديل إجازة متوافق عليها": " requested a change to approved leave", " عدّل طلب الإجازة": " edited their leave request", " طالب إجازة ": " requested ", "الإشعارات، ": "Notifications, ", " جديد": " new", "الإشعارات": "Notifications", "مفيش إشعارات جديدة.": "No new notifications.", "متاح ": "Available: ", "بتتحسب أيام تقويمية": "Counted in calendar days", "أيام عمل": "Working days", "اختار تاريخ البداية والنهاية.": "Choose start and end dates.", "تاريخ النهاية لازم يكون بعد البداية.": "End date must be after the start date.", " (أيام تقويمية)": " (calendar days)", " عمل، من غير الجمعة والسبت": " of work, excluding Friday and Saturday", "رصيدك المتاح ": "Your available balance is ", " بس.": " only.", "هيفضل لك ": "You'll have ", " بعد الموافقة.": " left after approval.", "طلب تعديل إجازة": "Request a leave change", "تعديل طلب الإجازة": "Edit leave request", "إرسال التعديل للمدير": "Send change to manager", "حفظ وإرسال للمدير": "Save & send to manager", "إرسال للمدير": "Send to manager", " — مديرك المباشر": " — your direct manager", " — مدير بديل": " — substitute manager", " — مش في الليست، لازم يكون مربوط بالنظام عشان يشوف الطلب": " — not in the list; they must be linked to the system to see the request", "بعت لمدير تاني": "Send to another manager", "بنجيب الأسامي…": "Loading names…", "إرسال لـ ": "Send to ", "مش موجود في الليست": "Not in the list", "مفيش حد بالاسم ده. اكتب الإيميل كامل عشان تضيفه مانوال.": "No one by that name. Type the full email to add them manually.", "مفيش موظفين في الليست.": "No employees in the list.", "رجوع لمديري المباشر": "Back to my direct manager", "اختار نوع الإجازة.": "Choose a leave type.", "تاريخ النهاية قبل البداية.": "End date is before the start date.", "الفترة دي كلها إجازة أسبوعية.": "These dates are all weekend days.", "اختار المدير اللي هيوافق.": "Choose the approving manager.", "إيميل المدير لازم ينتهي بـ @cef-eg.org": "The manager's email must end in @cef-eg.org", "مينفعش توافق على إجازتك بنفسك.": "You can't approve your own leave.", "رصيدك المتاح من ال": "Not enough balance. Available ", "اتبعت الطلب لـ": "Request sent to ", ". هيوصلك إشعار أول ما يرد.": ". You'll be notified when they reply.", "اتبعت التعديل لمديرك. إجازتك الأصلية فاضلة لحد ما يرد.": "Change sent to your manager. Your original leave stands until they reply.", "اتحفظ التعديل واتبعت لمديرك.": "Change saved and sent to your manager.", "اتأكد ربط ": "Confirmed ", " حساب.": " account link(s).", "في أول يناير كل سنة، رصيد كل موظف هيبقى الأرقام دي (أو الرصيد الخاص بيه لو متحدد في بياناته)، والمتبقي من السنة اللي فاتت هيتمسح. ده بيحصل أوتوماتيك حتى لو محدش فتح الصفحة يوم 1 يناير. سيب الخانة فاضية لو النوع مالوش حد أقصى.": "On January 1 each year, every employee's balance resets to these numbers (or their own allowance if set in their details), and last year's remaining days are cleared. This happens automatically even if nobody opens the page on January 1. Leave a field empty if the type has no limit.", "مش محدود": "Unlimited", "دوّر باسم أو إيميل": "Search by name or email", "بحث": "Search", "تحديث من الليست": "Update from list", "إضافة موظف": "Add employee", "رصيد أول السنة": "New-year allowance", "تقرير كل الموظفين": "All-employees report", "طلبات ربط حسابات (": "Account link requests (", " منهم إيميلهم موجود في الليست": " of them are in the list", "تأكيد دول كلهم": "Confirm all of these", "حساب": "Account", " (مش في الليست)": " (not in list)", "تأكيد": "Confirm", "إضافة للموظفين": "Add to employees", "مفيش موظفين لسه. اعمل Export من Microsoft Lists وارفعه من \"تحديث من الليست\".": "No employees yet. Export from Microsoft Lists and upload it via \"Update from list\".", "رفع ملف الليست": "Upload list file", "الموظف": "Employee", "المدير": "Manager", "، لسه مربطش حسابه": ", not linked yet", " معلّق": " pending", "تقرير": "Report", "مفيش نتايج.": "No results.", "تعديل بيانات موظف": "Edit employee", "حذف الموظف": "Delete employee", "إيميل الموظف": "Employee email", "الاسم": "Name", "إيميل المدير المباشر": "Direct manager email", "الرصيد الحالي": "Current balance", "سيب الخانة فاضية لو النوع ده مالوش حد أقصى. لو غيّرت رقم، الخصم هيبدأ يتحسب منه من النهاردة.": "Leave empty if this type has no limit. If you change a number, deductions start from it as of today.", "رصيد أول السنة الخاص بيه (اختياري)": "Personal new-year allowance (optional)", "العام: ": "Default: ", "العام": "Default", "املاه بس لو الموظف ده رصيده السنوي مختلف عن العام، زي اللي خدمته أكتر من 10 سنين. الفاضي بياخد الرصيد العام.": "Fill in only if this employee's yearly allowance differs from the default, e.g. over 10 years of service. Empty uses the default.", "اكتب إيميل صحيح للموظف.": "Enter a valid employee email.", "اكتب إيميل المدير.": "Enter the manager's email.", "الموظف مينفعش يكون مدير نفسه.": "An employee can't be their own manager.", "الموظف ده موجود بالفعل.": "This employee already exists.", "اتحفظت البيانات.": "Saved.", "اتضاف الموظف، ويقدر يطلب إجازة دلوقتي.": "Employee added and can request leave now.", "اتحفظ رصيد أول السنة.": "New-year allowance saved.", "اتشال الموظف من النظام.": "Employee removed from the system.", "استيراد": "Import", "من Microsoft Lists اختار Export ثم Export to CSV أو Excel، وارفع الملف هنا. الملف بيتقري على جهازك بس.": "In Microsoft Lists choose Export, then Export to CSV or Excel, and upload the file here. The file is read on your device only.", "الليست محتاجة عمود فيه إيميل الموظف وعمود فيه إيميل مديره. لو عمود المدير من نوع Person وبيطلع اسم بس، ضيف عمود فيه الإيميل.": "The list needs an employee email column and a manager email column. If the manager column is a Person field that only shows names, add a column with the email.", "مكتبة قراية الملفات متحملتش. حدّث الصفحة.": "The file reader didn't load. Refresh the page.", "مش قادر أقرا الملف ده. جرّب تعمل Export تاني كـ CSV.": "Can't read this file. Try exporting again as CSV.", " (اختياري)": " (optional)", "— مش موجود —": "— not present —", "عمود ": "Column ", "الأعمدة": "Columns", "إيميل المدير": "Manager email", "اسم الموظف": "Employee name", "أعمدة الرصيد": "Balance columns", "حدّث أرصدة الموظفين الموجودين بالفعل من الملف. لو مش متعلّمة، الموظفين الموجودين هيتحدّث مديرهم واسمهم بس، والخصومات اللي حصلت تفضل زي ما هي.": "Also update balances of existing employees from the file. If unchecked, existing employees only get their manager and name updated, and past deductions stay as they are.", "اختار عمود إيميل الموظف وعمود إيميل المدير.": "Choose the employee email column and the manager email column.", " موظف جديد": " new employees", " هيتحدّث": " to update", " صف ناقص إيميل هيتساب": " rows missing an email will be skipped", "جاري الاستيراد ": "Importing ", " من ": " of ", "اتحدّث ": "Updated ", " موظف من الليست.": " employees from the list.", "وقف بعد ": "Stopped after ", " موظف. اللي اتحفظ فضل محفوظ، وتقدر تعيد الرفع.": " employees. What was saved stays saved; you can upload again.", "الإيميل": "Email", "نوع الإجازة": "Leave type", "الرصيد": "Balance", "المستخدم": "Used", "في الانتظار": "Pending", "المتبقي": "Remaining", "من": "From", "إلى": "To", "عدد الأيام": "Days", "الحالة": "Status", "ملاحظات الموظف": "Employee notes", "رد المدير": "Manager reply", "تفاصيل الرصيد": "Balance details", "إجازات ": "Leave ", "التنزيل مش متاح دلوقتي.": "Download is not available right now.", "مؤسسة كير مصر للتنمية": "CARE Egypt Foundation for Development", "تعليم الكل كمقروء": "Mark all as read", "إغلاق": "Close", "الإجازة دي متوافق عليها. لو عدّلتها هترجع لمديرك يوافق على التعديل، ولو رفضه هتفضل الإجازة الأصلية زي ما هي.": "This leave is approved. If you change it, it goes back to your manager for approval; if they reject the change, your original leave stays as is.", "المدة": "Dates", "من يوم": "From", "لحد يوم": "To", "هيتبعت لـ": "Send to", "دوّر بالاسم أو اكتب الإيميل": "Search by name or type an email", "اختار المدير": "Choose manager", "ملاحظات": "Notes", "(اختياري)": "(optional)", "مثلاً: سفر عائلي، أو مين هيغطي شغلك": "e.g. family trip, or who will cover your work", "إلغاء": "Cancel", "تحديث من Microsoft Lists": "Update from Microsoft Lists", "حفظ": "Save"};
+Object.assign(EN,{"مكتبة تسجيل الدخول متحملتش": "The sign-in library didn't load", "اتأكد إن الصفحة مفتوحة من الدومين بتاعكم وفيه إنترنت، وحدّثها.": "Make sure the page is opened from your domain with internet access, then refresh.", "النظام لسه متظبطش": "The system isn't configured yet", "افتح الملف وحط Tenant ID وClient ID ورابط موقع SharePoint في الجزء اللي اسمه CONFIG.": "Open the file and fill the Tenant ID, Client ID and SharePoint site in the CONFIG section.", "تسجيل الدخول وقف": "Sign-in failed", "الحساب ده مش تبع المؤسسة": "This account isn't part of the organization", "ادخل بإيميل الشغل اللي بينتهي بـ @cef-eg.org": "Sign in with your work email ending in @cef-eg.org", "خروج": "Sign out", "مش قادرين نوصل لموقع SharePoint": "Can't reach the SharePoint site", "اتأكد من siteHost وsitePath في CONFIG، وإن حسابك عنده صلاحية على الموقع.": "Check siteHost and sitePath in CONFIG, and that your account has access to the site.", "أهلاً بيك في نظام الإجازات": "Welcome to the Vacation System", "ادخل بحساب Microsoft 365 بتاع الشغل.": "Sign in with your work Microsoft 365 account.", "تسجيل الدخول بحساب Microsoft": "Sign in with Microsoft", "إنشاء الليستات": "Create the lists", "جاري الإنشاء…": "Creating…", "محصلش إنشاء. اتأكد إن صلاحية Sites.Manage.All متفعّلة وإن حسابك Owner على الموقع.": "Couldn't create them. Make sure Sites.Manage.All is granted and your account is a site Owner.", "أول تشغيل": "First run", "الليستات بتاعة النظام مش موجودة على موقع SharePoint لسه. لو إنت الأدمن، دوس الزرار وهتتعمل لوحدها، وهتبقى إنت أول واحد في فريق الـ HR.": "The system's lists don't exist on the SharePoint site yet. If you're the admin, press the button and they'll be created, and you'll be the first HR team member.", "خروج وتغيير الحساب": "Sign out and switch account", "فريق الـ HR": "HR team", "إيميل واحد في كل سطر. دول بس اللي هيظهر لهم زرار \"دخول الـ HR\".": "One email per line. Only these people see the \"Open HR\" button.", "رصيد أول السنة والـ HR": "New-year allowance & HR"});
+function T(s){ return lang==='ar'?s:(EN[s]!==undefined?EN[s]:s); }
+function tL(t){ return TYPES[t]?(lang==='ar'?TYPES[t].label:TYPES[t].en):T('إجازة'); }
+function tS(t){ return TYPES[t]?(lang==='ar'?TYPES[t].short:TYPES[t].en):T('إجازة'); }
+const STATIC=[];
+(function(){
+  const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT); let n;
+  while((n=w.nextNode())){ const v=n.nodeValue; if(!/[\u0600-\u06FF]/.test(v)) continue; if(n.parentElement.closest('script,[data-noi18n],#app')) continue;
+    const m=v.match(/^(\s*)([\s\S]*?)(\s*)$/); STATIC.push({node:n,pre:m[1],ar:m[2],post:m[3]}); }
+  document.querySelectorAll('[placeholder],[aria-label]').forEach(el=>['placeholder','aria-label'].forEach(a=>{ const v=el.getAttribute(a); if(v&&/[\u0600-\u06FF]/.test(v)) STATIC.push({el,attr:a,ar:v}); }));
+})();
+const TYPES = {
+  annual:    {label:'سنوية / عارضة', en:'Annual/Casual Leave', short:'سنوية/عارضة', c:'--t-annual', re:/(annual|casual|اعتياد|سنوي|عارض)/},
+  sick:      {label:'مرضية', en:'Sick Leave', short:'مرضية', c:'--t-sick', re:/(sick|مرض)/},
+  emergency: {label:'طارئة', en:'Emergency Leave', short:'طارئة', c:'--t-casual', re:/(emergency|طارئ)/},
+  wellness:  {label:'صحة وعافية', en:'Wellness Leave', short:'عافية', c:'--t-wellness', re:/(wellness|عافي)/},
+  cto:       {label:'تعويضية', en:'Compensatory Time Off (CTO)', short:'تعويضية', c:'--t-cto', re:/(cto|compensat|تعويض)/},
+  maternity: {label:'وضع (أمومة)', en:'Maternity Leave', short:'وضع', c:'--t-maternity', calendar:true, re:/(matern|وضع|امومة|أمومة)/},
+  paternity: {label:'أبوة', en:'Paternity Leave', short:'أبوة', c:'--t-paternity', re:/(patern|أبوة|ابوة)/},
+  study:     {label:'دراسية', en:'Study Leave', short:'دراسية', c:'--t-exam', re:/(study|دراس)/},
+  holiday:   {label:'أعياد وعطلات', en:'Holiday Leave', short:'عطلات', c:'--t-hajj', re:/(holiday|عطل|أعياد|اعياد)/},
+  other:     {label:'إجازة أخرى', en:'Other Leave', short:'أخرى', c:'--t-other', re:/(other|أخرى|اخرى)/},
+  unpaid:    {label:'بدون أجر', en:'Unpaid Leave', short:'بدون أجر', c:'--t-unpaid', re:/(unpaid|بدون)/},
+  // old types kept only so earlier requests still display
+  casual:    {label:'عارضة', en:'Casual Leave', short:'عارضة', c:'--t-casual', legacy:true, re:/^$/},
+  hajj:      {label:'حج', en:'Hajj Leave', short:'حج', c:'--t-hajj', calendar:true, legacy:true, re:/^$/},
+  exam:      {label:'امتحانات', en:'Exam Leave', short:'امتحانات', c:'--t-exam', legacy:true, re:/^$/},
+};
+const ACTIVE=Object.entries(TYPES).filter(([k,t])=>!t.legacy);
+const ACTIVE_KEYS=ACTIVE.map(([k])=>k);
+const STATUS = {pending:'قيد المراجعة', approved:'تمت الموافقة', rejected:'مرفوضة', cancelled:'ملغاة'};
+let nf,fDay,fMon,fShort,fFull,fWhen;
+function setLocale(){
+  const L=lang==='ar'?'ar-EG':'en-GB';
+  nf=new Intl.NumberFormat(L,{maximumFractionDigits:1});
+  fDay=new Intl.DateTimeFormat(L,{day:'numeric',timeZone:'UTC'});
+  fMon=new Intl.DateTimeFormat(L,{month:'long',year:'numeric',timeZone:'UTC'});
+  fShort=new Intl.DateTimeFormat(L,{day:'numeric',month:'short',timeZone:'UTC'});
+  fFull=new Intl.DateTimeFormat(L,{weekday:'long',day:'numeric',month:'long',timeZone:'UTC'});
+  fWhen=new Intl.DateTimeFormat(L,{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'});
+}
+setLocale();
+
+let db=null, user=null, dl=null, me=null, myKey=null, isHR=false, readOnly=false;
+let linkLoaded=false, myClaim=null, claimLoaded=false, claims=[], links=new Map(), profiles={}, empUnsubs=[];
+let myEmp=null, myEmpLoaded=false, mgrEmp=null, mgrKey=null, mgrUnsub=null;
+let mine=[], team=[], teamEmps=new Map(), allEmps=new Map(), allReqs=[];
+let tab=null, hrQuery='', policy={};
+let editing=null;
+const prev={mine:new Map(), team:new Map()};
+const ready={mine:false, team:false, all:false, emps:false};
+
+const $=id=>document.getElementById(id);
+function h(tag, attrs, ...kids){
+  const el=document.createElement(tag);
+  if(attrs) for(const k in attrs){
+    const v=attrs[k]; if(v==null||v===false) continue;
+    if(k==='class') el.className=v;
+    else if(k==='style') el.setAttribute('style',v);
+    else if(k==='value') el.value=v;
+    else if(k.startsWith('on')) el.addEventListener(k.slice(2),v);
+    else el.setAttribute(k,v===true?'':v);
+  }
+  for(const c of kids.flat()){ if(c==null||c===false) continue; el.append(c instanceof Node?c:document.createTextNode(String(c))); }
+  return el;
+}
+function ekey(e){ return String(e||'').trim().toLowerCase().replace(/[^a-z0-9_\-.~:@+]/g,'_'); }
+function extractEmail(v){ const m=String(v||'').match(/[^\s<>"'(),;:]+@[^\s<>"'(),;:]+\.[^\s<>"'(),;:]+/); return m?m[0].toLowerCase():''; }
+function cellNum(v){ if(v===''||v==null) return null; if(typeof v==='number') return v; const s=String(v).replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/[^\d.\-]/g,''); if(!s) return null; const n=parseFloat(s); return isNaN(n)?null:n; }
+function parseD(s){const [y,m,d]=s.split('-').map(Number);return new Date(Date.UTC(y,m-1,d));}
+function countDays(s,e,cal){ if(!s||!e) return 0; const a=parseD(s), b=parseD(e); if(b<a) return 0; let n=0; for(const d=new Date(a); d<=b; d.setUTCDate(d.getUTCDate()+1)){const w=d.getUTCDay(); if(cal||(w!==5&&w!==6)) n++;} return n; }
+function daysTxt(n){ if(n===1) return T('يوم واحد'); if(n===2) return T('يومين'); if(n>=3&&n<=10&&Number.isInteger(n)) return nf.format(n)+T(' أيام'); return nf.format(n)+T(' يوم'); }
+function reqTxt(n){ return n===1?T('طلب واحد'):(n===2?T('طلبين'):nf.format(n)+T(' طلبات')); }
+function newId(){return 'r'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
+function nowIso(){return new Date().toISOString();}
+function todayIso(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function typeVar(t){ return 'var('+(TYPES[t]?TYPES[t].c:'--t-unpaid')+')'; }
+function typeLabel(t){ return tL(t); }
+function findEmp(k){ if(!k) return null; if(myEmp&&myEmp.key===k) return myEmp; if(mgrEmp&&mgrEmp.key===k) return mgrEmp; return teamEmps.get(k)||allEmps.get(k)||extraEmps.get(k)||(empDir&&empDir.get(k))||null; }
+let hrMode=false, chosenMgr=null, empDir=null, extraEmps=new Map(), empReqs=new Map();
+function nameOf(k){ const e=findEmp(k); return (e&&e.name)||k||'—'; }
+function av(k){ const n=nameOf(k); return h('span',{class:'av','aria-hidden':'true'}, (n.trim()[0]||T('؟')).toUpperCase()); }
+
+let toastT;
+function toast(msg){ const t=$('toast'); t.textContent=msg; t.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>t.hidden=true,4500); }
+function writeErr(e){
+  if(e&&e.code==='invalid_argument'){ toast(T('مش مسموح لك تعمل التغيير ده. اتأكد من صلاحيتك على الصفحة.')); }
+  else if(e&&e.code==='quota_exceeded'){ toast(T('مساحة النظام امتلأت. تواصل مع مسؤول النظام.')); }
+  else toast(T('محصلش حفظ، جرّب تاني بعد لحظة.'));
+}
+function gate(title,msg,withOut){ $('app').replaceChildren(h('div',{class:'gate'},h('h2',null,title),h('p',null,msg),withOut?h('p',null,h('button',{class:'ghost',onclick:signOut},T('خروج وتغيير الحساب'))):null)); }
+
+/* ---------- balances ---------- */
+// Balances in the list are the remaining days as of balanceAsOf; approvals after that date are deducted automatically.
+function held(r, emp){
+  const asOf=(emp&&emp.balanceAsOf)||''; const out={};
+  if((r.approvedAt||'')<=asOf) return out;
+  if(r.status==='approved') out[r.type]=(r.days||0);
+  if(r.status==='pending'&&r.amendment&&r.previous) out[r.previous.type]=(out[r.previous.type]||0)+(r.previous.days||0);
+  return out;
+}
+// New year: once the stored balance is from an earlier year, the old remainder is dropped and
+// the yearly allowance applies, minus approved leave that starts in the current year.
+function newYearOf(emp){ const Y=new Date().getFullYear(); const a=emp&&emp.balanceAsOf?new Date(emp.balanceAsOf).getFullYear():0; return a<Y?String(Y):null; }
+function allowanceOf(emp,t){ const o=emp&&emp.allowances&&emp.allowances[t]; if(o!=null) return o; const d=policy.allowances&&policy.allowances[t]; return d!=null?d:null; }
+function balanceInfo(emp, reqs, excludeId){
+  const res={}; if(!emp) return res;
+  const Y=newYearOf(emp);
+  for(const t of Object.keys(TYPES)){
+    const base=Y?allowanceOf(emp,t):(emp.balances?emp.balances[t]:null); if(base==null) continue;
+    let used=0, pend=0;
+    for(const r of reqs){
+      if(r.employeeEmail!==emp.key||r.id===excludeId) continue;
+      if(Y){
+        if(r.status==='approved'&&r.type===t&&(r.start||'').startsWith(Y)) used+=r.days||0;
+        if(r.status==='pending'&&r.amendment&&r.previous&&r.previous.type===t&&(r.previous.start||'').startsWith(Y)) used+=r.previous.days||0;
+      } else used+=held(r,emp)[t]||0;
+      if(r.status==='pending'&&r.type===t) pend+=r.days||0;
+    }
+    res[t]={base:+base, used, pend, remaining:+base-used, available:+base-used-pend};
+  }
+  return res;
+}
+
+/* ---------- boot ---------- */
+async function boot(){
+  if(!window.msal){ gate(T('مكتبة تسجيل الدخول متحملتش'),T('اتأكد إن الصفحة مفتوحة من الدومين بتاعكم وفيه إنترنت، وحدّثها.')); return; }
+  if(CONFIG.clientId.startsWith('PASTE')||CONFIG.tenantId.startsWith('PASTE')){ gate(T('النظام لسه متظبطش'),T('افتح الملف وحط Tenant ID وClient ID ورابط موقع SharePoint في الجزء اللي اسمه CONFIG.')); return; }
+  try{ await msalInit(); }catch(e){ gate(T('تسجيل الدخول وقف'),String(e&&e.message||e)); return; }
+  if(!account){ signInScreen(); return; }
+  me={id:account.localAccountId,name:account.name||account.username,email:account.username,avatarUrl:''};
+  if(!ekey(me.email).endsWith('@'+CONFIG.allowedDomain)){ gate(T('الحساب ده مش تبع المؤسسة'),T('ادخل بإيميل الشغل اللي بينتهي بـ @cef-eg.org'),true); return; }
+  $('meBox').replaceChildren(h('span',{class:'av'},(me.name||'?').trim()[0].toUpperCase()),h('span',null,me.name||''),h('button',{class:'linkbtn',onclick:signOut},T('خروج')));
+  try{ await resolveSite(); }catch(e){ gate(T('مش قادرين نوصل لموقع SharePoint'),T('اتأكد من siteHost وsitePath في CONFIG، وإن حسابك عنده صلاحية على الموقع.')); return; }
+  db=SPDB; dl={save:async({filename,data})=>{ const a=document.createElement('a'); a.href=URL.createObjectURL(data); a.download=filename; document.body.append(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),5000); }};
+  if(Object.keys(LISTS).some(k=>!LIST_IDS[k])){ setupScreen(); return; }
+  try{ const hrDoc=await db.collection('settings').doc('hr').get(); hrEmails=(hrDoc.exists&&hrDoc.data().emails)||[]; }catch(_){ hrEmails=[]; }
+  isHR=hrEmails.includes(ekey(me.email));
+  $('bell').hidden=false;
+  if(isHR){
+    const hb=h('button',{class:'ghost',id:'hrBtn',style:'padding:8px 14px;font-size:.88rem'},T('دخول الـ HR'));
+    hb.onclick=()=>{ hrMode=!hrMode; hb.textContent=hrMode?T('خروج من الـ HR'):T('دخول الـ HR'); tab=hrMode?'hr':null; render(); };
+    $('bell').before(hb);
+  }
+  db.collection('settings').doc('policy').onSnapshot(s=>{ policy=s.exists?s.data():{}; render(); }, subErr);
+  claimLoaded=true;
+  onMyLink({exists:true,data:()=>({email:ekey(me.email)}),metadata:{fromCache:false}});
+  if(isHR){
+    const R=db.collection('requests'), E=db.collection('employees');
+    E.onSnapshot(s=>{ allEmps=new Map(s.docs.map(d=>[d.id,{key:d.id,...d.data()}])); ready.emps=true; render(); }, subErr);
+    R.onSnapshot(s=>{ allReqs=s.docs.map(d=>({id:d.id,...d.data()})); ready.all=true; render(); }, subErr);
+  }
+  render(); schedule();
+}
+let hrEmails=[];
+function signInScreen(){
+  $('app').replaceChildren(h('div',{class:'gate'},h('h2',null,T('أهلاً بيك في نظام الإجازات')),h('p',null,T('ادخل بحساب Microsoft 365 بتاع الشغل.')),
+    h('p',{style:'margin-top:18px'},h('button',{class:'primary',onclick:signIn},T('تسجيل الدخول بحساب Microsoft')))));
+}
+function setupScreen(){
+  const btn=h('button',{class:'primary'},T('إنشاء الليستات'));
+  btn.onclick=async()=>{ btn.disabled=true; btn.textContent=T('جاري الإنشاء…'); try{ await createLists(); location.reload(); }catch(e){ btn.disabled=false; btn.textContent=T('إنشاء الليستات'); toast(T('محصلش إنشاء. اتأكد إن صلاحية Sites.Manage.All متفعّلة وإن حسابك Owner على الموقع.')); } };
+  $('app').replaceChildren(h('div',{class:'notice'},h('h2',null,T('أول تشغيل')),
+    h('p',null,T('الليستات بتاعة النظام مش موجودة على موقع SharePoint لسه. لو إنت الأدمن، دوس الزرار وهتتعمل لوحدها، وهتبقى إنت أول واحد في فريق الـ HR.')),
+    h('p',{style:'margin-top:14px'},btn)));
+}
+async function refreshProfiles(){ const ids=claims.map(c=>c.uid); if(!ids.length) return; profiles=await user.profiles(ids); render(); }
+function onMyLink(s){
+  const key=s.exists?s.data().email:null;
+  if(s.exists||!s.metadata.fromCache) linkLoaded=true;
+  if(key!==myKey){
+    empUnsubs.forEach(u=>u()); empUnsubs=[]; if(mgrUnsub){mgrUnsub();mgrUnsub=null;}
+    myKey=key; myEmp=null; myEmpLoaded=false; mgrEmp=null; mgrKey=null; mine=[]; team=[]; teamEmps=new Map(); ready.mine=false; ready.team=false; prev.mine.clear(); prev.team.clear();
+    if(key){
+      const R=db.collection('requests'), E=db.collection('employees');
+      empUnsubs.push(
+        E.doc(key).onSnapshot(onMyEmp, subErr),
+        R.where('employeeEmail','==',key).onSnapshot(s=>onReqs('mine',s), subErr),
+        R.where('managerEmail','==',key).onSnapshot(s=>onReqs('team',s), subErr),
+        E.where('managerEmail','==',key).onSnapshot(s=>{ teamEmps=new Map(s.docs.map(d=>[d.id,{key:d.id,...d.data()}])); render(); }, subErr));
+    }
+  }
+  render();
+}
+async function submitClaim(input, btn){
+  const email=extractEmail(input.value);
+  if(!email){ toast(T('اكتب إيميل الشغل صح.')); input.focus(); return; }
+  if(!/@cef-eg\.org$/.test(email)){ toast(T('اكتب إيميل الشغل اللي بينتهي بـ @cef-eg.org')); input.focus(); return; }
+  btn.disabled=true;
+  try{ await db.collection('claims').doc(me.id).set({email:ekey(email),at:nowIso()}); toast(T('اتبعت للـ HR يأكدوا. هتشتغل معاك أول ما يأكدوا.')); }
+  catch(e){ writeErr(e); } finally{ btn.disabled=false; }
+}
+function subErr(e){ if(e&&e.code==='revoked') gate(T('مفيش صلاحية'),T('الوصول للصفحة دي اتغيّر.')); else if(e&&e.code!=='unavailable') console.warn(e); }
+
+function onMyEmp(s){
+  myEmp=s.exists?{key:s.id,...s.data()}:null;
+  if(s.exists||!s.metadata.fromCache) myEmpLoaded=true;
+  const mk=myEmp?myEmp.managerEmail:null;
+  if(mk!==mgrKey){
+    mgrKey=mk; if(mgrUnsub) mgrUnsub(); mgrEmp=null; mgrUnsub=null;
+    if(mk) mgrUnsub=db.collection('employees').doc(mk).onSnapshot(ms=>{ mgrEmp=ms.exists?{key:ms.id,...ms.data()}:null; render(); },()=>{});
+  }
+  render();
+}
+
+function onReqs(which, snap){
+  const list=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
+  const p=prev[which];
+  if(ready[which]){
+    for(const r of list){
+      const old=p.get(r.id);
+      if(which==='mine'&&r.employeeUnseen&&old&&old.lastEvent!==r.lastEvent) toast(eventText(r,'mine'));
+      if(which==='team'&&r.managerUnseen&&(!old||old.updatedAt!==r.updatedAt)) toast(eventText(r,'team'));
+    }
+  }
+  p.clear(); list.forEach(r=>p.set(r.id,{lastEvent:r.lastEvent,updatedAt:r.updatedAt}));
+  ready[which]=true;
+  if(which==='mine') mine=list; else { team=list; loadTeamContext(); }
+  render();
+}
+
+/* ---------- render ---------- */
+// For a manager (regular or substitute): load each requester's employee record and full request history,
+// so the balance check counts leave approved by any manager.
+function loadTeamContext(){
+  const keys=[...new Set(team.filter(r=>r.status==='pending').map(r=>r.employeeEmail))];
+  keys.forEach(k=>{
+    if(!teamEmps.has(k)&&!extraEmps.has(k)) db.collection('employees').doc(k).get().then(s=>{ if(s.exists){ extraEmps.set(k,{key:k,...s.data()}); render(); } }).catch(()=>{});
+    db.collection('requests').where('employeeEmail','==',k).get().then(s=>{ empReqs.set(k,s.docs.map(d=>({id:d.id,...d.data()}))); render(); }).catch(()=>{});
+  });
+}
+function teamEmpOf(k){ return teamEmps.get(k)||extraEmps.get(k)||null; }
+function availableTabs(){
+  const t=[]; if(myEmp) t.push('mine'); if(team.length||teamEmps.size) t.push('team'); if(isHR&&hrMode) t.push('hr'); return t;
+}
+function render(){ if(!me) return; paint(); paintNotifs(); }
+
+function paint(){
+  const app=$('app'); const parts=[];
+  const tabsAvail=availableTabs();
+  if(!tabsAvail.includes(tab)) tab=tabsAvail[0]||null;
+  const first=(((myEmp&&myEmp.name)||me.name||'').split(' ')[0]);
+
+  if(!linkLoaded||(myKey&&!myEmpLoaded)){ parts.push(h('div',{class:'loading'},T('جاري التحميل…'))); app.replaceChildren(...parts); return; }
+
+  if(myEmp){
+    const info=balanceInfo(myEmp,mine,null);
+    const pendingMine=mine.filter(r=>r.status==='pending').length;
+    const sub=pendingMine? (T('عندك ')+reqTxt(pendingMine)+T(' مستني رد ')+nameOf(myEmp.managerEmail)+'.') : (T('طلباتك بتروح لـ')+nameOf(myEmp.managerEmail)+T(' على طول، والرصيد بيتخصم أول ما يوافق.'));
+    parts.push(h('section',{class:'hello'},
+      h('div',{class:'grow'},h('h1',null,first?(T('أهلاً يا ')+first):T('أهلاً بيك')),h('p',null,sub)),
+      readOnly?h('p',{class:'meta'},T('معاك صلاحية مشاهدة بس.')):h('button',{class:'primary',onclick:()=>openSheet(null)},h('span',{'aria-hidden':'true'},'+'),T('طلب إجازة جديد'))
+    ));
+    const keys=Object.keys(info);
+    if(keys.length) parts.push(h('div',{class:'bals','aria-label':T('رصيد الإجازات')}, keys.map(t=>h('div',{class:'bal',style:'--tc:'+typeVar(t)},
+      h('b',null,nf.format(info[t].remaining)), h('span',null,T('رصيد ')+tS(t)), info[t].pend?h('small',null,daysTxt(info[t].pend)+T(' في الانتظار')):null))));
+  } else if(myKey){
+    parts.push(h('div',{class:'notice'},h('h2',null,T('بياناتك مش في الليست')),h('p',null,T('حسابك مربوط بـ ')+myKey+T(' بس الإيميل ده مش موجود في ليست الموظفين. كلّم الـ HR.'))));
+  } else {
+    parts.push(claimCard());
+  }
+
+  if(tabsAvail.length>1||tab==='hr'){
+    const teamPending=team.filter(r=>r.status==='pending').length;
+    parts.push(h('div',{class:'tabs',role:'tablist'},
+      tabsAvail.includes('mine')?h('button',{class:'tab',role:'tab','aria-selected':String(tab==='mine'),onclick:()=>{tab='mine';paint();}},T('طلباتي')):null,
+      tabsAvail.includes('team')?h('button',{class:'tab',role:'tab','aria-selected':String(tab==='team'),onclick:()=>{tab='team';paint();}},T('طلبات فريقي'),teamPending?h('span',{class:'count'},nf.format(teamPending)):null):null,
+      tabsAvail.includes('hr')?h('button',{class:'tab',role:'tab','aria-selected':String(tab==='hr'),onclick:()=>{tab='hr';paint();}},T('الموظفين والأرصدة'),(()=>{const n=claims.filter(c=>links.get(c.uid)!==c.email).length;return n?h('span',{class:'count'},nf.format(n)):null;})()):null
+    ));
+  }
+
+  if(tab==='mine') parts.push(mineView());
+  else if(tab==='team') parts.push(teamView());
+  else if(tab==='hr') parts.push(hrView());
+  app.replaceChildren(...parts);
+}
+
+function claimCard(){
+  if(!claimLoaded) return h('div',{class:'loading'},T('جاري التحميل…'));
+  if(myClaim&&!myClaim._editing){
+    return h('div',{class:'notice'},h('h2',null,T('مستنيين تأكيد الـ HR')),
+      h('p',null,T('طلبت تربط حسابك بإيميل ')+myClaim.email+T('. أول ما الـ HR يأكدوا، هتلاقي رصيدك ومديرك هنا من غير ما تحدّث الصفحة.')),
+      readOnly?null:h('p',{style:'margin-top:10px'},h('button',{class:'linkbtn',onclick:()=>{ myClaim={...myClaim,_editing:true}; paint(); }},T('كتبت الإيميل غلط؟ غيّره'))));
+  }
+  const inp=h('input',{class:'inp',type:'email',dir:'ltr',placeholder:'name@cef-eg.org',value:myClaim?myClaim.email:'','aria-label':T('إيميل الشغل'),style:'max-width:340px'});
+  const btn=h('button',{class:'primary'},T('ربط حسابي'));
+  btn.onclick=()=>submitClaim(inp,btn);
+  inp.addEventListener('keydown',e=>{ if(e.key==='Enter') submitClaim(inp,btn); });
+  return h('div',{class:'notice'},h('h2',null,T('أول مرة تدخل؟')),
+    h('p',null,T('اكتب إيميل الشغل بتاعك زي ما هو في ليست الموظفين، عشان نجيب مديرك ورصيدك. الـ HR هيأكدوا الربط مرة واحدة بس.')),
+    readOnly?h('p',{class:'meta'},T('معاك صلاحية مشاهدة بس، اطلب من الـ HR صلاحية Contributor.')):h('div',{class:'toolbar',style:'margin:14px 0 0'},inp,btn));
+}
+function mineView(){
+  const w=h('div');
+  if(!ready.mine){ w.append(h('div',{class:'loading'},T('جاري التحميل…'))); return w; }
+  if(!mine.length){ w.append(h('div',{class:'empty'},h('p',null,T('لسه مطلبتش أي إجازة.')),readOnly?null:h('button',{class:'primary',onclick:()=>openSheet(null)},T('اطلب أول إجازة')))); return w; }
+  const open=mine.filter(r=>r.status==='pending'||(r.status==='approved'&&(r.end||'')>=todayIso()));
+  const past=mine.filter(r=>!open.includes(r));
+  if(open.length) w.append(h('div',{class:'list'},open.map(r=>ticket(r,'mine'))));
+  if(past.length) w.append(h('h3',{class:'section-h'},T('السابقة')),h('div',{class:'list'},past.map(r=>ticket(r,'mine'))));
+  return w;
+}
+function teamView(){
+  const w=h('div');
+  if(!team.length){ w.append(h('div',{class:'empty'},h('p',null,T('مفيش طلبات من فريقك لسه.')))); return w; }
+  const pend=team.filter(r=>r.status==='pending'), others=team.filter(r=>r.status!=='pending');
+  if(pend.length) w.append(h('h3',{class:'section-h',style:'margin-top:0'},T('محتاجة ردك')),h('div',{class:'list'},pend.map(r=>ticket(r,'team'))));
+  if(others.length) w.append(h('h3',{class:'section-h'},T('تم الرد عليها')),h('div',{class:'list'},others.map(r=>ticket(r,'team'))));
+  return w;
+}
+
+function ticket(r, view){
+  const s=parseD(r.start), e=parseD(r.end), same=r.start===r.end;
+  const stub=h('div',{class:'stub'},h('div',{class:'d'},fDay.format(s)),h('div',{class:'m'},fMon.format(s)),same?null:h('div',{class:'to'},T('لحد')),same?null:h('div',{class:'d2'},fShort.format(e)));
+  const otherKey=view==='mine'?r.managerEmail:r.employeeEmail;
+  let balLine=null;
+  if(view==='team'&&r.status==='pending'){
+    const emp=teamEmpOf(r.employeeEmail);
+    const info=balanceInfo(emp,empReqs.get(r.employeeEmail)||team,r.id)[r.type];
+    if(info){ const after=info.available-(r.days||0);
+      balLine=h('div',{class:'balline'+(after<0?' short':'')}, after<0?(T('الرصيد مش مكفّي: فاضل له ')+daysTxt(Math.max(info.available,0))+T(' بس من ال')+tS(r.type)):(T('رصيد ال')+tS(r.type)+T(' بعد الموافقة: ')+daysTxt(after)));
+    }
+  }
+  const body=h('div',{class:'body'},
+    h('div',{class:'row'},h('span',{class:'type'},h('i'),typeLabel(r.type),TYPES[r.type]&&lang==='ar'?h('span',{dir:'ltr',style:'font-weight:400;font-size:.82rem;color:var(--muted)'},TYPES[r.type].en):null),h('span',{class:'days'},daysTxt(r.days||0)),
+      h('span',{class:'pill s-'+r.status},r.status==='pending'&&r.amendment?T('تعديل قيد المراجعة'):T(STATUS[r.status]||r.status))),
+    h('div',{class:'who'},av(otherKey),view==='mine'?(T('المدير: ')+nameOf(otherKey)):nameOf(otherKey)),
+    r.amendment&&r.previous?h('div',{class:'amend'},T('كانت: '),h('s',null,typeLabel(r.previous.type)+T('، ')+fShort.format(parseD(r.previous.start))+(r.previous.start!==r.previous.end?(T(' لحد ')+fShort.format(parseD(r.previous.end))):'')+' ('+daysTxt(r.previous.days||0)+')')):null,
+    r.reason?h('p',{class:'reason'},r.reason):null,
+    r.managerNote?h('div',{class:'note'},h('b',null,T('رد المدير: ')),r.managerNote):null,
+    balLine,
+    actions(r,view),
+    h('div',{class:'meta'},metaLine(r))
+  );
+  const unseen=view==='mine'?r.employeeUnseen:r.managerUnseen;
+  return h('article',{class:'ticket',id:'t-'+view+'-'+r.id,style:'--tc:'+typeVar(r.type)},stub,body,unseen?h('span',{class:'new-dot'},T('جديد')):null);
+}
+function metaLine(r){
+  const ev={submitted:T('اتبعت'),resubmitted:T('اتبعت تاني'),edited:T('اتعدّل'),amended:T('اتطلب تعديل'),approved:T('اتوافق عليه'),rejected:T('اترفض'),amendment_rejected:T('التعديل اترفض'),cancelled:T('اتلغى')}[r.lastEvent]||T('آخر تحديث');
+  return ev+' '+(r.updatedAt?fWhen.format(new Date(r.updatedAt)):'');
+}
+function actions(r, view){
+  if(readOnly) return null;
+  if(view==='mine'){
+    if(r.status==='cancelled') return null;
+    const box=h('div',{class:'actions'});
+    box.append(h('button',{class:'ghost',onclick:()=>openSheet(r)},r.status==='approved'?T('طلب تعديل'):(r.status==='rejected'?T('تعديل وإعادة إرسال'):T('تعديل'))));
+    const cb=h('button',{class:'ghost danger'},T('إلغاء الإجازة'));
+    cb.addEventListener('click',()=>{ if(cb.dataset.sure) cancelReq(r,cb); else { cb.dataset.sure='1'; cb.textContent=T('متأكد؟ اضغط تاني'); setTimeout(()=>{ if(cb.isConnected){delete cb.dataset.sure; cb.textContent=T('إلغاء الإجازة');} },4000);} });
+    box.append(cb);
+    if(r.employeeUnseen) box.append(h('button',{class:'ghost',onclick:()=>markSeen(r,'employeeUnseen')},T('تمام، شفته')));
+    return box;
+  }
+  if(r.status!=='pending') return r.managerUnseen?h('div',{class:'actions'},h('button',{class:'ghost',onclick:()=>markSeen(r,'managerUnseen')},T('تمام، شفته'))):null;
+  const ta=h('textarea',{placeholder:T('رد للموظف (اختياري)'),maxlength:'400','aria-label':T('رد للموظف')});
+  const ok=h('button',{class:'ok-btn'},r.amendment?T('موافقة على التعديل'):T('موافقة'));
+  const no=h('button',{class:'no-btn'},r.amendment?T('رفض التعديل'):T('رفض'));
+  ok.onclick=()=>decide(r,true,ta.value.trim(),[ok,no]);
+  no.onclick=()=>decide(r,false,ta.value.trim(),[ok,no]);
+  return h('div',{class:'decide'},ta,h('div',{class:'actions'},ok,no));
+}
+
+/* ---------- request writes ---------- */
+const busy=new Set();
+async function guarded(id, fn){ if(busy.has(id)) return; busy.add(id); try{ await fn(); }catch(e){ writeErr(e); } finally{ busy.delete(id); } }
+function hist(r,action,note){ const a=Array.isArray(r.history)?r.history.slice(-30):[]; a.push({at:nowIso(),by:me.id,action,note:note||''}); return a; }
+
+function decide(r, approve, note, btns){
+  if(approve){
+    const info=balanceInfo(teamEmpOf(r.employeeEmail),empReqs.get(r.employeeEmail)||team,r.id)[r.type];
+    if(info&&(r.days||0)>info.available){ toast(T('مينفعش توافق: رصيد ال')+tS(r.type)+T(' مش مكفّي. ممكن ترفض وتطلب منه يغيّر النوع.')); return; }
+  }
+  btns.forEach(b=>b.disabled=true);
+  guarded(r.id, async ()=>{
+    const t=nowIso(); let patch;
+    if(approve) patch={status:'approved',amendment:false,previous:null,managerNote:note,approvedAt:t,decidedAt:t,decidedBy:me.id,updatedAt:t,employeeUnseen:true,managerUnseen:false,lastEvent:'approved',history:hist(r,'approved',note)};
+    else if(r.amendment&&r.previous) patch={...r.previous,status:'approved',amendment:false,previous:null,managerNote:note,decidedAt:t,decidedBy:me.id,updatedAt:t,employeeUnseen:true,managerUnseen:false,lastEvent:'amendment_rejected',history:hist(r,'amendment_rejected',note)};
+    else patch={status:'rejected',managerNote:note,decidedAt:t,decidedBy:me.id,updatedAt:t,employeeUnseen:true,managerUnseen:false,lastEvent:'rejected',history:hist(r,'rejected',note)};
+    await db.collection('requests').doc(r.id).update(patch);
+    toast(approve?T('اتوافق على الطلب واتخصم من الرصيد، والموظف هيوصله إشعار.'):T('اتبعت الرد للموظف.'));
+  }).finally(()=>btns.forEach(b=>{ if(b.isConnected) b.disabled=false; }));
+}
+function cancelReq(r, btn){
+  btn.disabled=true;
+  guarded(r.id, async ()=>{
+    const t=nowIso();
+    await db.collection('requests').doc(r.id).update({status:'cancelled',amendment:false,previous:null,updatedAt:t,managerUnseen:true,employeeUnseen:false,lastEvent:'cancelled',history:hist(r,'cancelled')});
+    toast(r.status==='approved'?T('اتلغت الإجازة ورجعت الأيام لرصيدك.'):T('اتلغى الطلب وبلّغنا مديرك.'));
+  });
+}
+function markSeen(r, field){ guarded(r.id, async ()=>{ await db.collection('requests').doc(r.id).update({[field]:false}); }); }
+
+/* ---------- notifications ---------- */
+function eventText(r, view){
+  if(view==='mine'){
+    const m=nameOf(r.managerEmail);
+    if(r.lastEvent==='approved') return m+T(' وافق على إجازتك ال')+tS(r.type)+' ('+daysTxt(r.days||0)+')';
+    if(r.lastEvent==='rejected') return m+T(' رفض طلب إجازتك ال')+tS(r.type);
+    if(r.lastEvent==='amendment_rejected') return m+T(' رفض التعديل، وإجازتك الأصلية لسه قائمة');
+    return T('تحديث على طلب إجازتك');
+  }
+  const e=nameOf(r.employeeEmail);
+  if(r.lastEvent==='cancelled') return e+T(' ألغى إجازته ال')+tS(r.type);
+  if(r.lastEvent==='amended') return e+T(' طالب تعديل إجازة متوافق عليها');
+  if(r.lastEvent==='edited') return e+T(' عدّل طلب الإجازة');
+  return e+T(' طالب إجازة ')+tS(r.type)+' ('+daysTxt(r.days||0)+')';
+}
+function notifItems(){
+  const a=mine.filter(r=>r.employeeUnseen).map(r=>({r,view:'mine',who:r.managerEmail}));
+  const b=team.filter(r=>r.managerUnseen).map(r=>({r,view:'team',who:r.employeeEmail}));
+  return [...a,...b].sort((x,y)=>(y.r.updatedAt||'').localeCompare(x.r.updatedAt||''));
+}
+function paintNotifs(){
+  const items=notifItems();
+  const badge=$('badge'); badge.hidden=!items.length; badge.textContent=nf.format(items.length);
+  $('bell').setAttribute('aria-label',items.length?(T('الإشعارات، ')+items.length+T(' جديد')):T('الإشعارات'));
+  $('readAll').hidden=!items.length||readOnly;
+  $('nlist').replaceChildren(...(items.length?items.map(it=>h('button',{class:'nitem',onclick:()=>openNotif(it)},av(it.who),h('div',null,h('p',null,eventText(it.r,it.view)),h('small',null,it.r.updatedAt?fWhen.format(new Date(it.r.updatedAt)):'')))):[h('div',{class:'nempty'},T('مفيش إشعارات جديدة.'))]));
+}
+function openNotif(it){
+  closeNotifs(); tab=it.view; paint();
+  const el=$('t-'+it.view+'-'+it.r.id);
+  if(el){ el.scrollIntoView({behavior:'smooth',block:'center'}); el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
+  if(!readOnly&&(it.view==='mine'||it.r.status!=='pending')) markSeen(it.r,it.view==='mine'?'employeeUnseen':'managerUnseen');
+}
+async function readAll(){
+  for(const it of notifItems()){
+    if(it.view==='team'&&it.r.status==='pending') continue;
+    try{ await db.collection('requests').doc(it.r.id).update({[it.view==='mine'?'employeeUnseen':'managerUnseen']:false}); }catch(e){ writeErr(e); break; }
+  }
+  closeNotifs();
+}
+function closeNotifs(){ $('npanel').hidden=true; $('bell').setAttribute('aria-expanded','false'); }
+$('bell').addEventListener('click',e=>{ e.stopPropagation(); const p=$('npanel'); p.hidden=!p.hidden; $('bell').setAttribute('aria-expanded',String(!p.hidden)); });
+$('readAll').addEventListener('click',readAll);
+document.addEventListener('click',e=>{ const p=$('npanel'); if(!p.hidden&&!p.contains(e.target)&&!$('bell').contains(e.target)) closeNotifs(); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeNotifs(); });
+document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>$(b.dataset.close).close()));
+
+/* ---------- leave form ---------- */
+function buildTypes(selected){
+  const info=balanceInfo(myEmp,mine,editing?editing.id:null);
+  $('types').replaceChildren(...ACTIVE.map(([k,t])=>{
+    const id='ty-'+k, b=info[k];
+    const note=b?(T('متاح ')+daysTxt(Math.max(b.available,0))):(t.calendar?T('بتتحسب أيام تقويمية'):T('أيام عمل'));
+    return h('div',{class:'tchip',style:'--tc:var('+t.c+')'},
+      h('input',{type:'radio',name:'ltype',id,value:k,checked:k===selected,disabled:!!(b&&b.available<=0&&k!==selected),onchange:updateCalc}),
+      h('label',{for:id},h('b',null,h('i'),tL(k)),lang==='ar'?h('small',{dir:'ltr',style:'text-align:right'},t.en):null,h('small',null,note)));
+  }));
+}
+function selType(){ const x=document.querySelector('input[name="ltype"]:checked'); return x?x.value:null; }
+function updateCalc(){
+  if($('dStart').value&&!$('dEnd').value) $('dEnd').value=$('dStart').value;
+  $('dEnd').min=$('dStart').value||'';
+  const s=$('dStart').value, e=$('dEnd').value, t=selType(), calc=$('calc');
+  if(!s||!e){ calc.textContent=T('اختار تاريخ البداية والنهاية.'); return; }
+  if(parseD(e)<parseD(s)){ calc.textContent=T('تاريخ النهاية لازم يكون بعد البداية.'); return; }
+  const cal=t&&TYPES[t].calendar, n=countDays(s,e,cal);
+  const b=t?balanceInfo(myEmp,mine,editing?editing.id:null)[t]:null;
+  calc.replaceChildren(h('b',null,daysTxt(n)),cal?T(' (أيام تقويمية)'):T(' عمل، من غير الجمعة والسبت'),' — '+fFull.format(parseD(s))+(s!==e?(T(' لحد ')+fFull.format(parseD(e))):''),
+    b?h('div',{style:n>b.available?'color:var(--bad)':''},n>b.available?(T('رصيدك المتاح ')+daysTxt(Math.max(b.available,0))+T(' بس.')):(T('هيفضل لك ')+daysTxt(b.available-n)+T(' بعد الموافقة.'))):null);
+}
+['dStart','dEnd'].forEach(id=>$(id).addEventListener('change',updateCalc));
+
+function openSheet(r){
+  if(!myEmp) return;
+  editing=r;
+  $('formErr').textContent='';
+  $('sheetTitle').textContent=r?(r.status==='approved'?T('طلب تعديل إجازة'):T('تعديل طلب الإجازة')):T('طلب إجازة جديد');
+  $('submitBtn').textContent=r?(r.status==='approved'?T('إرسال التعديل للمدير'):T('حفظ وإرسال للمدير')):T('إرسال للمدير');
+  $('amendWarn').hidden=!(r&&r.status==='approved');
+  buildTypes(r?r.type:null);
+  $('dStart').value=r?r.start:''; $('dEnd').value=r?r.end:'';
+  $('reason').value=r?(r.reason||''):'';
+  chosenMgr=r?r.managerEmail:(myEmp.managerEmail||null);
+  $('mgrInput').value='';
+  paintMgr();
+  updateCalc();
+  $('sheet').showModal();
+}
+function paintMgr(){
+  const show=$('mgrShow'), pick=$('mgrPick'), direct=myEmp&&myEmp.managerEmail;
+  if(chosenMgr){
+    const inList=!!findEmp(chosenMgr);
+    show.hidden=false; pick.hidden=true;
+    show.replaceChildren(av(chosenMgr),h('span',null,nameOf(chosenMgr),h('small',null,chosenMgr+(chosenMgr===direct?T(' — مديرك المباشر'):(inList?T(' — مدير بديل'):T(' — مش في الليست، لازم يكون مربوط بالنظام عشان يشوف الطلب'))))),
+      h('button',{type:'button',class:'ghost',onclick:()=>{ chosenMgr=null; paintMgr(); $('mgrInput').focus(); }},T('بعت لمدير تاني')));
+  } else {
+    show.hidden=true; pick.hidden=false; searchMgr();
+  }
+}
+async function loadDir(){
+  if(empDir) return;
+  try{ const s=await db.collection('employees').get(); empDir=new Map(s.docs.map(d=>[d.id,{key:d.id,...d.data()}])); }catch(_){ empDir=new Map(); }
+}
+async function searchMgr(){
+  const ul=$('mgrList'), q=$('mgrInput').value.trim().toLowerCase(), direct=myEmp&&myEmp.managerEmail;
+  if(!empDir){ ul.replaceChildren(h('li',{class:'hint'},T('بنجيب الأسامي…'))); await loadDir(); }
+  const pickOne=k=>{ chosenMgr=k; paintMgr(); };
+  const hits=[...empDir.values()].filter(e=>e.key!==myKey&&(!q||(e.name||'').toLowerCase().includes(q)||e.key.includes(q)))
+    .sort((a,b)=>(a.key===direct?-1:b.key===direct?1:(a.name||a.key).localeCompare(b.name||b.key,'ar'))).slice(0,8);
+  const items=hits.map(e=>h('li',{role:'option'},h('button',{type:'button',onclick:()=>pickOne(e.key)},av(e.key),h('span',null,e.name||e.key,h('small',null,e.key+(e.key===direct?T(' — مديرك المباشر'):''))))));
+  const typed=extractEmail(q);
+  if(typed&&!empDir.has(ekey(typed))&&ekey(typed)!==myKey) items.push(h('li',{role:'option'},h('button',{type:'button',onclick:()=>pickOne(ekey(typed))},h('span',{class:'av'},'+'),h('span',null,T('إرسال لـ ')+typed,h('small',null,T('مش موجود في الليست'))))));
+  if(!items.length) items.push(h('li',{class:'hint'},q?T('مفيش حد بالاسم ده. اكتب الإيميل كامل عشان تضيفه مانوال.'):T('مفيش موظفين في الليست.')));
+  if(direct) items.push(h('li',null,h('button',{type:'button',class:'linkbtn',onclick:()=>pickOne(direct)},T('رجوع لمديري المباشر'))));
+  ul.replaceChildren(...items);
+}
+$('mgrInput').addEventListener('input',searchMgr);
+$('submitBtn').addEventListener('click',async()=>{
+  const err=$('formErr'); err.textContent='';
+  const type=selType(), s=$('dStart').value, e=$('dEnd').value, reason=$('reason').value.trim(), mk=chosenMgr;
+  if(!type){ err.textContent=T('اختار نوع الإجازة.'); return; }
+  if(!s||!e){ err.textContent=T('اختار تاريخ البداية والنهاية.'); return; }
+  if(parseD(e)<parseD(s)){ err.textContent=T('تاريخ النهاية قبل البداية.'); return; }
+  const days=countDays(s,e,TYPES[type].calendar);
+  if(!days){ err.textContent=T('الفترة دي كلها إجازة أسبوعية.'); return; }
+  if(!mk){ err.textContent=T('اختار المدير اللي هيوافق.'); return; }
+  if(!/@cef-eg\.org$/.test(mk)){ err.textContent=T('إيميل المدير لازم ينتهي بـ @cef-eg.org'); return; }
+  if(mk===myKey){ err.textContent=T('مينفعش توافق على إجازتك بنفسك.'); return; }
+  const b=balanceInfo(myEmp,mine,editing?editing.id:null)[type];
+  if(b&&days>b.available){ err.textContent=T('رصيدك المتاح من ال')+tS(type)+' '+daysTxt(Math.max(b.available,0))+T(' بس.'); return; }
+  const btn=$('submitBtn'); btn.disabled=true; const t=nowIso();
+  try{
+    if(!editing){
+      await db.collection('requests').doc(newId()).set({
+        employeeId:me.id, employeeEmail:myKey, managerEmail:mk, type, start:s, end:e, days, reason,
+        status:'pending', amendment:false, previous:null, managerNote:'', createdAt:t, updatedAt:t, decidedAt:null, approvedAt:null,
+        managerUnseen:true, employeeUnseen:false, lastEvent:'submitted', history:[{at:t,by:me.id,action:'submitted',note:''}]
+      });
+      $('sheet').close(); tab='mine'; toast(T('اتبعت الطلب لـ')+nameOf(mk)+T('. هيوصلك إشعار أول ما يرد.'));
+    } else {
+      const r=editing, f={type,start:s,end:e,days,reason,managerEmail:mk,updatedAt:t,managerUnseen:true,employeeUnseen:false,managerNote:''};
+      let patch;
+      if(r.status==='approved') patch={...f,status:'pending',amendment:true,previous:{type:r.type,start:r.start,end:r.end,days:r.days,reason:r.reason||'',managerEmail:r.managerEmail},lastEvent:'amended',history:hist(r,'amended')};
+      else if(r.status==='rejected') patch={...f,status:'pending',amendment:false,previous:null,lastEvent:'resubmitted',history:hist(r,'resubmitted')};
+      else patch={...f,lastEvent:'edited',history:hist(r,'edited')};
+      await db.collection('requests').doc(r.id).update(patch);
+      $('sheet').close(); toast(r.status==='approved'?T('اتبعت التعديل لمديرك. إجازتك الأصلية فاضلة لحد ما يرد.'):T('اتحفظ التعديل واتبعت لمديرك.'));
+    }
+  }catch(ex){ writeErr(ex); } finally{ btn.disabled=false; }
+});
+
+/* ---------- HR ---------- */
+async function confirmClaims(list){
+  let n=0;
+  try{ for(const c of list){ await db.collection('links').doc(c.uid).set({email:c.email,at:nowIso()}); await db.collection('claims').doc(c.uid).delete(); n++; } toast(T('اتأكد ربط ')+nf.format(n)+T(' حساب.')); }
+  catch(e){ writeErr(e); }
+}
+function balTypesInUse(){ const s=new Set(); allEmps.forEach(e=>{ const Y=newYearOf(e); Object.keys(TYPES).forEach(t=>{ if(Y?allowanceOf(e,t)!=null:(e.balances&&e.balances[t]!=null)) s.add(t); }); }); return Object.keys(TYPES).filter(t=>s.has(t)); }
+function openPolicy(){
+  $('polErr').textContent='';
+  const a=policy.allowances||{};
+  $('polBody').replaceChildren(
+    h('p',{class:'help',style:'margin:0'},T('في أول يناير كل سنة، رصيد كل موظف هيبقى الأرقام دي (أو الرصيد الخاص بيه لو متحدد في بياناته)، والمتبقي من السنة اللي فاتت هيتمسح. ده بيحصل أوتوماتيك حتى لو محدش فتح الصفحة يوم 1 يناير. سيب الخانة فاضية لو النوع مالوش حد أقصى.')),
+    h('div',{class:'grid2'},ACTIVE.map(([k,t])=>h('div',null,h('label',{for:'pa-'+k},tL(k)+(lang==='ar'?' — '+t.en:'')),
+      h('input',{class:'inp',id:'pa-'+k,type:'number',min:'0',step:'0.5',inputmode:'decimal',placeholder:T('مش محدود'),value:a[k]!=null?String(a[k]):''})))));
+  $('polBody').append(h('div',{class:'field'},h('label',{for:'hrList'},T('فريق الـ HR')),h('textarea',{class:'inp',id:'hrList',rows:'3',dir:'ltr',value:hrEmails.join('\n')}),h('p',{class:'help'},T('إيميل واحد في كل سطر. دول بس اللي هيظهر لهم زرار "دخول الـ HR".'))));
+  $('polDlg').showModal();
+}
+function hrView(){
+  const w=h('div');
+  if(!ready.emps||!ready.all){ w.append(h('div',{class:'loading'},T('جاري التحميل…'))); return w; }
+  const search=h('input',{class:'inp search',type:'search',placeholder:T('دوّر باسم أو إيميل'),'aria-label':T('بحث'),value:hrQuery});
+  search.addEventListener('input',()=>{ hrQuery=search.value; const pos=search.selectionStart; paint(); const s2=document.querySelector('.search'); if(s2){ s2.focus(); s2.setSelectionRange(pos,pos);} });
+  w.append(h('div',{class:'toolbar'},
+    h('button',{class:'primary',onclick:openImport},T('تحديث من الليست')),
+    h('button',{class:'ghost',onclick:()=>openEmp(null)},T('إضافة موظف')),
+    h('button',{class:'ghost',onclick:openPolicy},T('رصيد أول السنة')),
+    dl&&allEmps.size?h('button',{class:'ghost',onclick:()=>exportXlsx(null)},T('تقرير كل الموظفين')):null,
+    search));
+  const pendClaims=claims.filter(c=>links.get(c.uid)!==c.email);
+  if(pendClaims.length){
+    const matched=pendClaims.filter(c=>allEmps.has(c.email));
+    w.append(h('div',{class:'wait-box'},h('h3',null,T('طلبات ربط حسابات (')+nf.format(pendClaims.length)+')'),
+      matched.length>1?h('div',{class:'wait-row'},h('span',null,nf.format(matched.length)+T(' منهم إيميلهم موجود في الليست')),h('button',{class:'ghost',onclick:()=>confirmClaims(matched)},T('تأكيد دول كلهم'))):null,
+      pendClaims.map(c=>{ const p=profiles[c.uid]; const inList=allEmps.has(c.email);
+        return h('div',{class:'wait-row'},h('span',null,((p&&p.name)||T('حساب'))+' ← '+c.email+(inList?'':T(' (مش في الليست)'))),
+          inList?h('button',{class:'ghost',onclick:()=>confirmClaims([c])},T('تأكيد')):h('button',{class:'ghost',onclick:()=>openEmp(null,{email:c.email,name:(p&&p.name)||''})},T('إضافة للموظفين')),
+          h('button',{class:'linkbtn',onclick:()=>db.collection('claims').doc(c.uid).delete().catch(writeErr)},T('رفض'))); })));
+  }
+  if(!allEmps.size){ w.append(h('div',{class:'empty'},h('p',null,T('مفيش موظفين لسه. اعمل Export من Microsoft Lists وارفعه من "تحديث من الليست".')),h('button',{class:'primary',onclick:openImport},T('رفع ملف الليست')))); return w; }
+  const types=balTypesInUse(), q=hrQuery.trim().toLowerCase(), linkedSet=new Set(links.values());
+  const rows=[...allEmps.values()].filter(e=>!q||(e.name||'').toLowerCase().includes(q)||e.key.includes(q)).sort((a,b)=>(a.name||a.key).localeCompare(b.name||b.key,'ar'));
+  const tbl=h('table',null,
+    h('thead',null,h('tr',null,h('th',null,T('الموظف')),h('th',null,T('المدير')),types.map(t=>h('th',null,T('رصيد ')+tS(t))),h('th',null,''))),
+    h('tbody',null,rows.map(e=>{ const info=balanceInfo(e,allReqs,null);
+      return h('tr',null,h('td',null,e.name||'—',h('span',{class:'sub'},e.key)),h('td',null,nameOf(e.managerEmail)),
+        types.map(t=>{ const b=info[t]; return h('td',{class:'num'+(b&&b.remaining<=0?' low':'')},b?nf.format(b.remaining):'—',b&&b.pend?h('span',{class:'sub'},nf.format(b.pend)+T(' معلّق')):null); }),
+        h('td',null,h('button',{class:'linkbtn',onclick:()=>openEmp(e)},T('تعديل')),dl?h('button',{class:'linkbtn',onclick:()=>exportXlsx(e)},T('تقرير')):null));
+    })));
+  w.append(h('div',{class:'tbl-wrap'},tbl));
+  if(!rows.length) w.append(h('p',{class:'meta',style:'text-align:center'},T('مفيش نتايج.')));
+  return w;
+}
+
+/* employee add/edit */
+let empEditing=null;
+function openEmp(emp, prefill){
+  empEditing=emp; $('empErr').textContent='';
+  $('empTitle').textContent=emp?T('تعديل بيانات موظف'):T('إضافة موظف');
+  $('empDel').hidden=!emp; delete $('empDel').dataset.sure; $('empDel').textContent=T('حذف الموظف');
+  const info=emp?balanceInfo(emp,allReqs,null):{};
+  const body=$('empBody');
+  body.replaceChildren(
+    h('div',{class:'grid2'},
+      h('div',null,h('label',{for:'eEmail'},T('إيميل الموظف')),h('input',{class:'inp',id:'eEmail',type:'email',dir:'ltr',placeholder:'name@cef-eg.org',value:emp?emp.key:(prefill?prefill.email:''),disabled:!!emp})),
+      h('div',null,h('label',{for:'eName'},T('الاسم')),h('input',{class:'inp',id:'eName',value:emp?(emp.name||''):(prefill?prefill.name||'':'')}))),
+    h('div',null,h('label',{for:'eMgr',style:'font-size:.85rem;color:var(--muted);display:block;margin-bottom:4px'},T('إيميل المدير المباشر')),h('input',{class:'inp',id:'eMgr',type:'email',dir:'ltr',placeholder:'manager@cef-eg.org',value:emp?(emp.managerEmail||''):''})),
+    h('div',{class:'field'},h('span',{class:'lbl'},T('الرصيد الحالي')),
+      h('div',{class:'grid2'},ACTIVE.map(([k,t])=>h('div',null,h('label',{for:'eb-'+k},tL(k)+(lang==='ar'?' — '+t.en:'')),
+        h('input',{class:'inp',id:'eb-'+k,type:'number',min:'0',step:'0.5',inputmode:'decimal',placeholder:T('مش محدود'),'data-orig':info[k]?String(info[k].remaining):'',value:info[k]?String(info[k].remaining):''})))),
+      h('p',{class:'help'},T('سيب الخانة فاضية لو النوع ده مالوش حد أقصى. لو غيّرت رقم، الخصم هيبدأ يتحسب منه من النهاردة.'))),
+    h('div',{class:'field'},h('span',{class:'lbl'},T('رصيد أول السنة الخاص بيه (اختياري)')),
+      h('div',{class:'grid2'},ACTIVE.map(([k,t])=>{ const own=emp&&emp.allowances&&emp.allowances[k]; const def=policy.allowances&&policy.allowances[k];
+        return h('div',null,h('label',{for:'ea-'+k},tL(k)),h('input',{class:'inp',id:'ea-'+k,type:'number',min:'0',step:'0.5',inputmode:'decimal',placeholder:def!=null?(T('العام: ')+def):T('العام'),value:own!=null?String(own):''})); })),
+      h('p',{class:'help'},T('املاه بس لو الموظف ده رصيده السنوي مختلف عن العام، زي اللي خدمته أكتر من 10 سنين. الفاضي بياخد الرصيد العام.')))
+  );
+  $('empDlg').showModal();
+}
+$('empSave').addEventListener('click',async()=>{
+  const err=$('empErr'); err.textContent='';
+  const email=extractEmail($('eEmail').value), mgr=extractEmail($('eMgr').value), name=$('eName').value.trim();
+  if(!email){ err.textContent=T('اكتب إيميل صحيح للموظف.'); return; }
+  if(!mgr){ err.textContent=T('اكتب إيميل المدير.'); return; }
+  const key=empEditing?empEditing.key:ekey(email);
+  if(ekey(mgr)===key){ err.textContent=T('الموظف مينفعش يكون مدير نفسه.'); return; }
+  if(!empEditing&&allEmps.has(key)){ err.textContent=T('الموظف ده موجود بالفعل.'); return; }
+  let changed=!empEditing; const bal={};
+  for(const k of ACTIVE_KEYS){ const inp=$('eb-'+k); const v=cellNum(inp.value); bal[k]=v; if(inp.value.trim()!==inp.dataset.orig) changed=true; }
+  const t=nowIso();
+  const doc=empEditing?{...empEditing}:{email:key};
+  delete doc.key;
+  Object.assign(doc,{name,managerEmail:ekey(mgr),updatedAt:t});
+  if(changed){ doc.balances=bal; doc.balanceAsOf=t; }
+  const alw={}; for(const k of ACTIVE_KEYS){ const v=cellNum($('ea-'+k).value); if(v!=null) alw[k]=v; }
+  doc.allowances=alw;
+  const btn=$('empSave'); btn.disabled=true;
+  try{
+    await db.collection('employees').doc(key).set(doc);
+    $('empDlg').close(); toast(empEditing?T('اتحفظت البيانات.'):T('اتضاف الموظف، ويقدر يطلب إجازة دلوقتي.'));
+  }catch(e){ writeErr(e); } finally{ btn.disabled=false; }
+});
+$('polSave').addEventListener('click',async()=>{
+  const a={}; for(const k of ACTIVE_KEYS){ const v=cellNum($('pa-'+k).value); if(v!=null) a[k]=v; }
+  const btn=$('polSave'); btn.disabled=true;
+  const hrNew=[...new Set(($('hrList').value.match(/[^\s,;]+@[^\s,;]+/g)||[]).map(ekey))];
+  if(!hrNew.includes(ekey(me.email))) hrNew.push(ekey(me.email));
+  try{ await db.collection('settings').doc('policy').set({allowances:a,updatedAt:nowIso()}); await db.collection('settings').doc('hr').set({emails:hrNew}); hrEmails=hrNew; $('polDlg').close(); toast(T('اتحفظ رصيد أول السنة.')); }
+  catch(e){ writeErr(e); } finally{ btn.disabled=false; }
+});
+$('empDel').addEventListener('click',async()=>{
+  const b=$('empDel');
+  if(!b.dataset.sure){ b.dataset.sure='1'; b.textContent=T('متأكد؟ اضغط تاني'); return; }
+  try{ await db.collection('employees').doc(empEditing.key).delete(); $('empDlg').close(); toast(T('اتشال الموظف من النظام.')); }catch(e){ writeErr(e); }
+});
+
+/* import */
+let imp={headers:[],rows:[],map:{},updBal:false};
+function openImport(){
+  imp={headers:[],rows:[],map:{},updBal:false};
+  $('impErr').textContent=''; $('impGo').disabled=true; $('impGo').textContent=T('استيراد');
+  const file=h('input',{type:'file',accept:'.xlsx,.xls,.csv',id:'impFile',class:'inp'});
+  file.addEventListener('change',()=>readFile(file.files[0]));
+  $('impBody').replaceChildren(
+    h('div',{class:'drop'},h('p',null,T('من Microsoft Lists اختار Export ثم Export to CSV أو Excel، وارفع الملف هنا. الملف بيتقري على جهازك بس.')),file),
+    h('p',{class:'help'},T('الليست محتاجة عمود فيه إيميل الموظف وعمود فيه إيميل مديره. لو عمود المدير من نوع Person وبيطلع اسم بس، ضيف عمود فيه الإيميل.')));
+  $('imp').showModal();
+}
+async function readFile(f){
+  const err=$('impErr'); err.textContent='';
+  if(!f) return;
+  if(!window.XLSX){ err.textContent=T('مكتبة قراية الملفات متحملتش. حدّث الصفحة.'); return; }
+  try{
+    const wb=XLSX.read(await f.arrayBuffer(),{type:'array'});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    const arr=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:true});
+    let hi=arr.findIndex(r=>r.filter(c=>String(c).trim()).length>=2);
+    if(hi<0) throw new Error('empty');
+    imp.headers=arr[hi].map(c=>String(c).trim());
+    imp.rows=arr.slice(hi+1).filter(r=>r.some(c=>String(c).trim()));
+    guessMap(); paintImport();
+  }catch(e){ err.textContent=T('مش قادر أقرا الملف ده. جرّب تعمل Export تاني كـ CSV.'); }
+}
+function guessMap(){
+  const H=imp.headers.map(x=>x.toLowerCase());
+  const f=test=>H.findIndex(test);
+  const isMail=s=>/(mail|بريد|ايميل|إيميل)/.test(s), isMgr=s=>/(manager|supervisor|مدير|المشرف)/.test(s);
+  const m={};
+  m.email=f(s=>isMail(s)&&!isMgr(s));
+  m.manager=f(s=>isMgr(s)&&isMail(s)); if(m.manager<0) m.manager=f(isMgr);
+  m.name=f(s=>/(name|اسم|الاسم)/.test(s)&&!isMgr(s)); if(m.name<0) m.name=f(s=>s==='title'||s==='العنوان');
+  for(const [k,t] of ACTIVE) m['bal_'+k]=f(s=>t.re.test(s)&&!isMgr(s));
+  imp.map=m;
+}
+function impCol(row,k){ const i=imp.map[k]; return (i==null||i<0)?'':row[i]; }
+function impParsed(){
+  const out=[]; let bad=0;
+  for(const row of imp.rows){
+    const email=extractEmail(impCol(row,'email')), mgr=extractEmail(impCol(row,'manager'));
+    if(!email||!mgr){ bad++; continue; }
+    const bal={}; let any=false;
+    for(const k of ACTIVE_KEYS){ if(imp.map['bal_'+k]>=0){ bal[k]=cellNum(impCol(row,'bal_'+k)); any=true; } }
+    out.push({key:ekey(email),name:String(impCol(row,'name')||'').trim(),mgr:ekey(mgr),bal:any?bal:null});
+  }
+  return {out,bad};
+}
+function paintImport(){
+  const sel=(k,label,req)=>h('div',null,h('label',{for:'map-'+k},label+(req?'':T(' (اختياري)'))),
+    (()=>{ const s=h('select',{class:'inp',id:'map-'+k},h('option',{value:'-1'},T('— مش موجود —')),imp.headers.map((hd,i)=>h('option',{value:String(i)},hd||(T('عمود ')+(i+1))))); s.value=String(imp.map[k]??-1); s.addEventListener('change',()=>{ imp.map[k]=+s.value; paintPreview(); }); return s; })());
+  const chk=h('input',{type:'checkbox',id:'updBal'}); chk.checked=imp.updBal; chk.addEventListener('change',()=>{ imp.updBal=chk.checked; paintPreview(); });
+  $('impBody').replaceChildren(
+    h('div',{class:'field'},h('span',{class:'lbl'},T('الأعمدة')),h('div',{class:'grid2'},sel('email',T('إيميل الموظف'),true),sel('manager',T('إيميل المدير'),true),sel('name',T('اسم الموظف')))),
+    h('div',{class:'field'},h('span',{class:'lbl'},T('أعمدة الرصيد')),h('div',{class:'grid2'},ACTIVE.map(([k,t])=>sel('bal_'+k,tL(k)+(lang==='ar'?' — '+t.en:''))))),
+    h('label',{class:'check'},chk,h('span',null,T('حدّث أرصدة الموظفين الموجودين بالفعل من الملف. لو مش متعلّمة، الموظفين الموجودين هيتحدّث مديرهم واسمهم بس، والخصومات اللي حصلت تفضل زي ما هي.'))),
+    h('div',{id:'impPrev',class:'preview'}));
+  paintPreview();
+}
+function paintPreview(){
+  const p=$('impPrev'); if(!p) return;
+  if(imp.map.email<0||imp.map.manager<0){ p.replaceChildren(h('span',{style:'color:var(--bad)'},T('اختار عمود إيميل الموظف وعمود إيميل المدير.'))); $('impGo').disabled=true; return; }
+  const {out,bad}=impParsed();
+  const nNew=out.filter(r=>!allEmps.has(r.key)).length, nOld=out.length-nNew;
+  p.replaceChildren(h('span',null,nf.format(nNew)+T(' موظف جديد')),h('span',null,nf.format(nOld)+T(' هيتحدّث')),bad?h('span',{style:'color:var(--bad)'},nf.format(bad)+T(' صف ناقص إيميل هيتساب')):null);
+  $('impGo').disabled=!out.length;
+}
+$('impGo').addEventListener('click',async()=>{
+  const {out}=impParsed(); const btn=$('impGo'); btn.disabled=true;
+  const t=nowIso(); let done=0;
+  try{
+    for(const r of out){
+      const ex=allEmps.get(r.key);
+      let doc;
+      if(ex){ doc={...ex}; delete doc.key; doc.managerEmail=r.mgr; if(r.name) doc.name=r.name; doc.updatedAt=t;
+        if(imp.updBal&&r.bal){ doc.balances=r.bal; doc.balanceAsOf=t; } }
+      else doc={email:r.key,name:r.name,managerEmail:r.mgr,balances:r.bal||{},balanceAsOf:t,updatedAt:t};
+      await db.collection('employees').doc(r.key).set(doc);
+      done++; btn.textContent=T('جاري الاستيراد ')+nf.format(done)+T(' من ')+nf.format(out.length);
+    }
+    $('imp').close(); toast(T('اتحدّث ')+nf.format(done)+T(' موظف من الليست.'));
+  }catch(e){ writeErr(e); $('impErr').textContent=T('وقف بعد ')+nf.format(done)+T(' موظف. اللي اتحفظ فضل محفوظ، وتقدر تعيد الرفع.'); }
+  finally{ btn.disabled=false; btn.textContent=T('استيراد'); }
+});
+
+/* export */
+async function exportXlsx(single){
+  if(!window.XLSX||!dl) return;
+  const types=balTypesInUse();
+  const emps=(single?[single]:[...allEmps.values()]).sort((a,b)=>(a.name||a.key).localeCompare(b.name||b.key,'ar'));
+  const Y=String(new Date().getFullYear());
+  // Sheet 1 keeps the re-importable layout (English type names map back on upload)
+  const bal=emps.map(e=>{ const info=balanceInfo(e,allReqs,null); const o={'Name':e.name||'','Email':e.key,'Manager Email':e.managerEmail||''};
+    types.forEach(t=>{ o[TYPES[t].en]=info[t]?info[t].remaining:''; }); return o; });
+  const det=[];
+  emps.forEach(e=>{ const info=balanceInfo(e,allReqs,null);
+    types.forEach(t=>{ const b=info[t]; if(!b) return;
+      det.push({[T('الاسم')]:e.name||'',[T('الإيميل')]:e.key,[T('المدير')]:nameOf(e.managerEmail),[T('نوع الإجازة')]:tL(t),'Leave Type':TYPES[t].en,[T('الرصيد')]:b.base,[T('المستخدم')]:b.used,[T('في الانتظار')]:b.pend,[T('المتبقي')]:b.remaining}); }); });
+  const keys=new Set(emps.map(e=>e.key));
+  const lv=allReqs.filter(r=>keys.has(r.employeeEmail)&&((r.start||'').startsWith(Y)||r.status==='pending'))
+    .sort((a,b)=>(nameOf(a.employeeEmail)).localeCompare(nameOf(b.employeeEmail),'ar')||(a.start||'').localeCompare(b.start||''))
+    .map(r=>({[T('الاسم')]:nameOf(r.employeeEmail),[T('الإيميل')]:r.employeeEmail,[T('نوع الإجازة')]:typeLabel(r.type),'Leave Type':TYPES[r.type]?TYPES[r.type].en:'',[T('من')]:r.start,[T('إلى')]:r.end,[T('عدد الأيام')]:r.days||0,[T('الحالة')]:r.status==='pending'&&r.amendment?T('تعديل قيد المراجعة'):(T(STATUS[r.status]||r.status)),[T('المدير')]:nameOf(r.managerEmail),[T('ملاحظات الموظف')]:r.reason||'',[T('رد المدير')]:r.managerNote||''}));
+  const sheet=(rows,cols)=>{ const ws=XLSX.utils.json_to_sheet(rows.length?rows:[Object.fromEntries(cols.map(c=>[c,'']))]); ws['!cols']=cols.map(c=>({wch:Math.max(12,c.length+4)})); return ws; };
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,sheet(bal,['Name','Email','Manager Email',...types.map(t=>TYPES[t].en)]),'Balances');
+  XLSX.utils.book_append_sheet(wb,sheet(det,[T('الاسم'),T('الإيميل'),T('المدير'),T('نوع الإجازة'),'Leave Type',T('الرصيد'),T('المستخدم'),T('في الانتظار'),T('المتبقي')]),T('تفاصيل الرصيد'));
+  XLSX.utils.book_append_sheet(wb,sheet(lv,[T('الاسم'),T('الإيميل'),T('نوع الإجازة'),'Leave Type',T('من'),T('إلى'),T('عدد الأيام'),T('الحالة'),T('المدير'),T('ملاحظات الموظف'),T('رد المدير')]),T('إجازات ')+Y);
+  wb.Workbook={Views:[{RTL:true}]};
+  const buf=XLSX.write(wb,{bookType:'xlsx',type:'array'});
+  const fname=single?('leave-report-'+single.key.split('@')[0]+'-'+todayIso()+'.xlsx'):('leave-report-all-'+todayIso()+'.xlsx');
+  try{ await dl.save({filename:fname,data:new Blob([buf])}); }
+  catch(e){ if(e&&e.code!=='declined') toast(T('التنزيل مش متاح دلوقتي.')); }
+}
+
+function applyLang(){
+  document.documentElement.lang=lang; document.documentElement.dir=lang==='ar'?'rtl':'ltr';
+  setLocale();
+  for(const it of STATIC){ if(it.attr) it.el.setAttribute(it.attr,T(it.ar)); else it.node.nodeValue=it.pre+T(it.ar)+it.post; }
+  $('langBtn').textContent=lang==='ar'?'English':'عربي';
+  $('langBtn').setAttribute('lang',lang==='ar'?'en':'ar');
+  const hb=$('hrBtn'); if(hb) hb.textContent=T(hrMode?'خروج من الـ HR':'دخول الـ HR');
+}
+$('langBtn').addEventListener('click',()=>{ lang=lang==='ar'?'en':'ar'; try{ localStorage.setItem('vs-lang',lang); }catch(_){} applyLang(); render(); });
+applyLang();
+boot();
+})();
+</script>
+</body>
+</html>
